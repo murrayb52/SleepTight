@@ -177,6 +177,7 @@
     <string name="sound_kalimba_drops">Kalimba drops</string>
     <string name="sound_kalimba">Kalimba</string>
     <string name="sound_music_box">Music box</string>
+    <string name="sound_credit_short">by %1$s · CC0 · Freesound</string>
     <string name="sound_preview_hint">Tap a sound to hear it at your alarm volume. On the night, it starts quietly and rises over a minute.</string>
     <string name="reminder_row">30 min before bedtime</string>
     <string name="bedside_row">Bedside check</string>

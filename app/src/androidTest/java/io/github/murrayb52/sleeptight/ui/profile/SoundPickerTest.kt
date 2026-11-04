@@ -30,4 +30,14 @@ class SoundPickerTest {
         compose.onNodeWithText("Chime").performClick()
         assertEquals(null, picked)
     }
+
+    @Test
+    fun eachSoundShowsWhoMadeIt() {
+        compose.setContent {
+            SleepTightTheme { SoundPickerDialog(AlarmSound.CHIME, onPick = {}, onDismiss = {}, preview = false) }
+        }
+        compose.onNodeWithText("by F1tz · CC0 · Freesound", substring = true).assertExists()
+        compose.onNodeWithText("by thulitt · CC0 · Freesound", substring = true).assertExists()
+        compose.onNodeWithText("Made for SleepTight", substring = true).assertExists()
+    }
 }

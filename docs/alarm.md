@@ -97,5 +97,5 @@ Six sounds (`AlarmSound`), chosen in **Profile → Alarm → Sound**:
 
 - The choice is stored as a key in `Settings.alarmSound` (null = chime). An unknown key, or a file that won't play, falls back to the chime.
 - Bundled sounds loop with `MediaPlayer` on the alarm stream; the chime loops with a static `AudioTrack`. Both get the same 10 → 100 % ramp (`AlarmPlayer`).
-- In the picker, tapping a sound selects it and plays a preview at half volume on the alarm stream, so it follows the alarm volume. The preview stops on the next tap or when the picker closes.
+- In the picker, each sound shows who made it ("by F1tz · CC0 · Freesound", or "Made for SleepTight" for the chime), from the same `SoundCredit` as the credits page. Tapping a sound selects it and plays a preview at half volume on the alarm stream, so it follows the alarm volume. The preview stops on the next tap or when the picker closes.
 - Emulator-checked: with Birdsong selected, the ring plays a looping `MediaPlayer` with `USAGE_ALARM`.

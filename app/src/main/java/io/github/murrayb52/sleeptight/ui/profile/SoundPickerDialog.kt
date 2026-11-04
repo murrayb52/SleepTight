@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
@@ -33,8 +34,9 @@ import io.github.murrayb52.sleeptight.ui.theme.Palette
 private const val PREVIEW_VOLUME = 0.5f
 
 /**
- * Picks the alarm sound. Tapping a sound selects it and plays a preview on the alarm stream (so it
- * follows the alarm volume); the preview stops on another tap or when the dialog closes.
+ * Picks the alarm sound. Each sound shows who made it. Tapping a sound selects it and plays a
+ * preview on the alarm stream (so it follows the alarm volume); the preview stops on another tap or
+ * when the dialog closes.
  */
 @Composable
 fun SoundPickerDialog(current: AlarmSound, onPick: (String?) -> Unit, onDismiss: () -> Unit, preview: Boolean = true) {
@@ -66,7 +68,16 @@ fun SoundPickerDialog(current: AlarmSound, onPick: (String?) -> Unit, onDismiss:
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = sound == selected, onClick = null, colors = RadioButtonDefaults.colors(selectedColor = Palette.Ember))
-                        Text(stringResource(sound.label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).heightIn(min = 24.dp))
+                        Column(Modifier.weight(1f).padding(start = 8.dp, top = 6.dp, bottom = 6.dp)) {
+                            Text(stringResource(sound.label), style = MaterialTheme.typography.bodyLarge, color = Palette.Text)
+                            // Who made it, from the same credit the credits page uses.
+                            Text(
+                                sound.credit?.let { stringResource(R.string.sound_credit_short, it.author) }
+                                    ?: stringResource(R.string.credits_made_here),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Palette.Muted,
+                            )
+                        }
                     }
                 }
                 Text(stringResource(R.string.sound_preview_hint), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)

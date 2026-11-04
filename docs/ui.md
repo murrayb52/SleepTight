@@ -63,7 +63,7 @@ Dates and times, the score dial with time in bed, and the alarm time and snoozes
 
 All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings:
 - **Goals**: bedtime (clock picker), sleep (6–10 h in half hours), snoozes (0–3)
-- **Alarm**: wake window, sound (a picker with previews; see [alarm.md](alarm.md#sounds))
+- **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds))
 - **Reminders**: bedtime reminder and bedside check switches
 - **Data**: Garmin and export, both coming soon
 - **About**: **Credits and licences**, a page crediting each alarm sound (original title, author, CC0, a link to Freesound) and the Outfit typeface (with its full SIL Open Font License text), and noting that the chime and the bedside illustration were made for the app
