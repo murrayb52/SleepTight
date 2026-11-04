@@ -23,6 +23,14 @@ data class AlarmConfig(
     val rampStartVolume: Float = 0.10f,
     /** ...and reaches full volume after this long. */
     val rampDuration: Duration = Duration.ofSeconds(60),
+    /** After this many snoozes the alarm can only be stopped. */
+    val maxSnoozes: Int = 5,
+    /** Each snooze is this much shorter than the one before... */
+    val snoozeStepMinutes: Int = 2,
+    /** ...but never shorter than this. */
+    val minSnoozeMinutes: Int = 2,
+    /** The bedtime reminder comes this long before the bedtime goal. */
+    val bedtimeReminderLead: Duration = Duration.ofMinutes(30),
 )
 
 data class WakeWindow(val start: Instant, val end: Instant) {
@@ -73,5 +81,30 @@ object VolumeRamp {
     fun at(elapsed: Duration, config: AlarmConfig = AlarmConfig()): Float {
         val progress = (elapsed.toMillis().toFloat() / config.rampDuration.toMillis()).coerceIn(0f, 1f)
         return config.rampStartVolume + (1f - config.rampStartVolume) * progress
+    }
+}
+
+/**
+ * Snoozes get shorter each time (9 → 7 → 5 → 3 → 2 minutes with the default 9) and run out after
+ * [AlarmConfig.maxSnoozes], after which the alarm can only be stopped.
+ */
+object SnoozeLadder {
+    /** Length of the next snooze, or null if no snoozes are left. */
+    fun minutesFor(snoozesSoFar: Int, baseMinutes: Int, config: AlarmConfig = AlarmConfig()): Int? {
+        if (snoozesSoFar >= config.maxSnoozes) return null
+        return (baseMinutes - config.snoozeStepMinutes * snoozesSoFar).coerceAtLeast(config.minSnoozeMinutes)
+    }
+
+    fun remaining(snoozesSoFar: Int, config: AlarmConfig = AlarmConfig()): Int =
+        (config.maxSnoozes - snoozesSoFar).coerceAtLeast(0)
+}
+
+object BedtimeReminder {
+    /** The next reminder strictly after [now]: [AlarmConfig.bedtimeReminderLead] before the [bedtime] goal. */
+    fun next(now: Instant, zone: ZoneId, bedtime: LocalTime, config: AlarmConfig = AlarmConfig()): Instant {
+        val time = bedtime.minus(config.bedtimeReminderLead)
+        val local = now.atZone(zone)
+        val today = local.toLocalDate().atTime(time).atZone(zone)
+        return (if (today.isAfter(local)) today else local.toLocalDate().plusDays(1).atTime(time).atZone(zone)).toInstant()
     }
 }

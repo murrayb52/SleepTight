@@ -21,9 +21,11 @@ object Notifications {
     private const val STOPPED_ID = 2
     const val ALARM_ID = 3
     private const val SNOOZED_ID = 4
+    private const val REMINDER_ID = 5
     private const val CHANNEL_TRACKING = "tracking"
     private const val CHANNEL_ALERTS = "alerts"
     private const val CHANNEL_ALARM = "alarm"
+    private const val CHANNEL_REMINDERS = "reminders"
 
     fun createChannels(context: Context) {
         val manager = NotificationManagerCompat.from(context)
@@ -48,10 +50,49 @@ object Notifications {
                 .setVibrationEnabled(false)
                 .build(),
         )
+        manager.createNotificationChannel(
+            NotificationChannelCompat.Builder(CHANNEL_REMINDERS, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName(context.getString(R.string.channel_reminders))
+                .setDescription(context.getString(R.string.channel_reminders_description))
+                .build(),
+        )
     }
 
-    /** The ringing alarm: opens the full-screen alarm, with Snooze and Dismiss actions. */
-    fun alarmRinging(context: Context): Notification {
+    fun showBedtimeReminder(context: Context, bedtime: String) {
+        val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return
+        val text = context.getString(R.string.reminder_text, bedtime)
+        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
+            .setSmallIcon(R.drawable.ic_stat_tracking)
+            .setContentTitle(context.getString(R.string.reminder_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(openApp(context))
+            .setAutoCancel(true)
+            .build()
+        try {
+            manager.notify(REMINDER_ID, notification)
+        } catch (e: SecurityException) {
+            // Permission revoked between the check and the call.
+        }
+    }
+
+    fun cancelBedtimeReminder(context: Context) = NotificationManagerCompat.from(context).cancel(REMINDER_ID)
+
+    /** Replaces the ringing notification once the next snooze length is known. */
+    fun updateAlarmRinging(context: Context, nextSnoozeMinutes: Int?) {
+        try {
+            NotificationManagerCompat.from(context).notify(ALARM_ID, alarmRinging(context, nextSnoozeMinutes))
+        } catch (e: SecurityException) {
+            // Notifications revoked; the alarm screen and Home still offer the buttons.
+        }
+    }
+
+    /**
+     * The ringing alarm: opens the full-screen alarm, with Stop and (while snoozes are left) Snooze.
+     * Snooze is left off until its length is known.
+     */
+    fun alarmRinging(context: Context, nextSnoozeMinutes: Int? = null): Notification {
         val fullScreen = PendingIntent.getActivity(
             context,
             REQUEST_ALARM_SCREEN,
@@ -67,7 +108,12 @@ object Notifications {
             .setFullScreenIntent(fullScreen, true)
             .setContentIntent(fullScreen)
             .setOngoing(true)
-            .addAction(0, context.getString(R.string.alarm_snooze_short), serviceAction(context, AlarmRingService.ACTION_SNOOZE))
+            .setOnlyAlertOnce(true)
+            .apply {
+                if (nextSnoozeMinutes != null) {
+                    addAction(0, context.getString(R.string.alarm_snooze, nextSnoozeMinutes), serviceAction(context, AlarmRingService.ACTION_SNOOZE))
+                }
+            }
             .addAction(0, context.getString(R.string.alarm_dismiss), serviceAction(context, AlarmRingService.ACTION_DISMISS))
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()

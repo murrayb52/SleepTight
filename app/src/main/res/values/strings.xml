@@ -71,8 +71,8 @@
     <string name="alarm_good_morning">Good morning</string>
     <string name="alarm_dismiss">Dismiss</string>
     <string name="alarm_snooze">Snooze %1$d min</string>
-    <string name="alarm_snooze_short">Snooze</string>
-    <string name="alarm_snooze_counted">Snoozes are counted towards your goal of at most one, but never blocked.</string>
+    <string name="alarm_snoozes_used">%1$d of %2$d snoozes used. Each one is shorter.</string>
+    <string name="alarm_no_snoozes_left">No snoozes left. Time to get up.</string>
     <string name="alarm_notification_title">Alarm</string>
     <string name="alarm_snoozed_title">Alarm snoozed until %1$s</string>
     <string name="alarm_volume_off">Your alarm volume is off, so the alarm will only vibrate. Turn up the alarm volume in your phone\'s sound settings.</string>
@@ -80,6 +80,10 @@
     <string name="alarm_full_screen_denied">SleepTight can\'t show the alarm over your lock screen. It will still ring, but you\'ll need to unlock to stop it. Allow full-screen notifications for SleepTight.</string>
     <string name="alarm_notifications_off">Notifications are off, so the alarm can\'t show its screen or Snooze and Dismiss buttons. It will ring for up to 10 minutes; open SleepTight to stop it.</string>
     <string name="allow">Allow</string>
+    <string name="channel_reminders">Bedtime reminder</string>
+    <string name="channel_reminders_description">A nudge 30 minutes before your bedtime goal</string>
+    <string name="reminder_title">Bedtime in 30 minutes</string>
+    <string name="reminder_text">Time to start winding down. Your goal is to be in bed by %1$s.</string>
     <string name="channel_alarm">Alarm</string>
     <string name="channel_alarm_description">The ringing alarm</string>
 

@@ -5,6 +5,7 @@ import io.github.murrayb52.sleeptight.alarm.AlarmController
 import io.github.murrayb52.sleeptight.alarm.AlarmEvents
 import io.github.murrayb52.sleeptight.alarm.AlarmScheduler
 import io.github.murrayb52.sleeptight.alarm.AlarmState
+import io.github.murrayb52.sleeptight.alarm.BedtimeReminderScheduler
 import io.github.murrayb52.sleeptight.data.NightRepository
 import io.github.murrayb52.sleeptight.data.RoomRecordingStore
 import io.github.murrayb52.sleeptight.data.SleepTightDatabase
@@ -43,6 +44,7 @@ class AppContainer(context: Context) {
     /** Written by AlarmRingService, read by the alarm screen and Home. */
     val alarmState = MutableStateFlow<AlarmState>(AlarmState.Idle)
     val alarmController = AlarmController(context.applicationContext, nightRepository, alarmScheduler, alarmState, clock)
+    val bedtimeReminders = BedtimeReminderScheduler(context.applicationContext, clock)
 }
 
 /**

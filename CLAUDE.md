@@ -14,6 +14,7 @@ A personal Android sleep tracker. The spec is `docs/plan/2026-11-04-v1-build-pla
 
 - `docs/architecture.md`: modules, components, a night end to end, key design decisions. **Read it before structural changes and update it in the same commit when the structure changes** (including the per-component Status column).
 - `docs/README.md`: index of how-it-works pages per feature.
+- `docs/Roadmap.md`: current features, agreed-but-unbuilt work and future ideas. **Read it at the start of a session**, add agreed ideas to it, and move items to "Current features" when they ship.
 - `README.md`: product-level overview for first-time visitors. Keep architecture there to a brief nod that links to `docs/architecture.md`.
 
 ## Testing on devices

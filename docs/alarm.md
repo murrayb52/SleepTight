@@ -48,9 +48,8 @@ Activity per minute is kept in memory by the recorder and rebuilt from stored sa
 `AlarmRingService` (a foreground service of type `mediaPlayback`) is started by the ring alarm. It:
 
 - records `alarmFiredAt` on the night (first ring only, so snoozes don't overwrite it) and calls `AlarmEvents.onAlarmFired`
-- plays the **built-in chime** (`Chime`, a generated C–E–G bell repeating every 3 s, so no audio files are needed) on the **alarm stream**, with the volume ramping from **10 % to 100 % over 60 s**
-- vibrates in a repeating pattern
-- shows a full-screen alarm over the lock screen, with the time, **Dismiss** and **Snooze N min**
+- plays the **built-in chime** (`Chime`, a generated C–E–G bell repeating every 3 s, so no audio files are needed) on the **alarm stream**, with the volume ramping from **10 % to 100 % over 60 s**. There's **no vibration**: you asked for sound only (2026-11-04)
+- shows a full-screen alarm over the lock screen, with the time, **Dismiss** and, while snoozes are left, **Snooze N min**
 
 If the phone is unlocked and in use, Android shows a heads-up notification with Snooze and Dismiss instead of taking over the screen. Home also shows a "Good morning" card with **Dismiss** and **Snooze** while the alarm is ringing or snoozed.
 
@@ -58,8 +57,17 @@ An unanswered alarm stops after **10 minutes**.
 
 ## Snooze and dismiss
 
-- **Snooze** adds one to the night's `snoozeCount`, reschedules the ring, shows "Alarm snoozed until 06:24" with a Dismiss action, and calls `AlarmEvents.onSnooze`. Snoozing is never blocked or limited. The count feeds the regularity snooze factor (goal: at most 1).
+- **Snooze** adds one to the night's `snoozeCount`, reschedules the ring, shows "Alarm snoozed until 06:24" with a Dismiss action, and calls `AlarmEvents.onSnooze`. The count feeds the regularity snooze factor (goal: at most 1).
+- **Snoozes get shorter and run out** (`SnoozeLadder`). Each snooze is 2 minutes shorter than the last, never under 2: with the default 9-minute base that's **9 → 7 → 5 → 3 → 2**. After **5 snoozes** the alarm screen, the notification and Home offer only Stop, with "No snoozes left. Time to get up." The next snooze length is worked out from the night's count when the alarm starts ringing, so it's right after a restart too. Emulator-checked: snooze 5 is 2 minutes, and the re-ring offers only Stop.
 - **Dismiss** stops the sound, cancels pending alarms and calls `AlarmEvents.onDismiss`. It doesn't close the night; that's still **I'm up**.
+
+## Bedtime reminder
+
+A notification **30 minutes before the bedtime goal** ("Bedtime in 30 minutes. Time to start winding down…"), so 21:30 for the default 22:00. `BedtimeReminder.next` picks the next such time, and `BedtimeReminderScheduler` keeps one exact alarm for it:
+
+- re-set after each reminder (for tomorrow), on boot and clock changes, at app start, and whenever the bedtime goal or the reminder setting changes
+- skipped if you're already in bed (a night is open), and cleared from the notification shade when you tap Going to bed
+- on by default (`Settings.bedtimeReminderEnabled`, schema version 3). The switch arrives with the Profile screen
 
 ## `AlarmEvents`
 

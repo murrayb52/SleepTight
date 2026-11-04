@@ -125,3 +125,44 @@ class VolumeRampTest {
         assertEquals(0.10f, VolumeRamp.at(Duration.ofSeconds(-3)), 1e-6f)
     }
 }
+
+class SnoozeLadderTest {
+    @Test
+    fun `each snooze is 2 minutes shorter, down to 2, and there are 5 at most`() {
+        assertEquals(listOf(9, 7, 5, 3, 2), (0 until 5).map { SnoozeLadder.minutesFor(snoozesSoFar = it, baseMinutes = 9) })
+        assertEquals(null, SnoozeLadder.minutesFor(snoozesSoFar = 5, baseMinutes = 9))
+        assertEquals(null, SnoozeLadder.minutesFor(snoozesSoFar = 8, baseMinutes = 9))
+    }
+
+    @Test
+    fun `a short base snooze bottoms out at 2 minutes`() {
+        assertEquals(listOf(4, 2, 2, 2, 2), (0 until 5).map { SnoozeLadder.minutesFor(it, baseMinutes = 4) })
+    }
+
+    @Test
+    fun `remaining snoozes count down`() {
+        assertEquals(5, SnoozeLadder.remaining(0))
+        assertEquals(1, SnoozeLadder.remaining(4))
+        assertEquals(0, SnoozeLadder.remaining(7))
+    }
+}
+
+class BedtimeReminderTest {
+    private val bedtime = LocalTime.of(22, 0)
+
+    @Test
+    fun `the reminder is 30 minutes before bedtime, later today`() {
+        assertEquals(at("2026-11-04T21:30"), BedtimeReminder.next(at("2026-11-04T18:00"), ZONE, bedtime))
+    }
+
+    @Test
+    fun `once today's reminder has passed, it's tomorrow's`() {
+        assertEquals(at("2026-11-05T21:30"), BedtimeReminder.next(at("2026-11-04T21:30"), ZONE, bedtime))
+        assertEquals(at("2026-11-05T21:30"), BedtimeReminder.next(at("2026-11-04T23:59"), ZONE, bedtime))
+    }
+
+    @Test
+    fun `an after-midnight bedtime reminds on the right side of midnight`() {
+        assertEquals(at("2026-11-04T00:00"), BedtimeReminder.next(at("2026-11-03T22:00"), ZONE, LocalTime.of(0, 30)))
+    }
+}

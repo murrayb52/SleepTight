@@ -49,4 +49,31 @@ class MigrationTest {
             }
         }
     }
+
+    @Test
+    fun version2To3KeepsSettingsAndTurnsTheBedtimeReminderOn() {
+        helper.createDatabase(dbName, 2).use { db ->
+            db.execSQL(
+                "INSERT INTO nights (id, bedTapAt, wakeTapAt, zoneId, snoozeCount, garminImported) " +
+                    "VALUES (1, 1000, 2000, 'Africa/Johannesburg', 1, 0)",
+            )
+            db.execSQL(
+                "INSERT INTO settings (id, targetBedtimeMinutes, targetSleepMinutes, maxSnoozes, alarmEnabled, " +
+                    "alarmWindowStartMinutes, alarmWindowEndMinutes, snoozeMinutes, alarmSound, espressoHomeMg, " +
+                    "espressoRestaurantMg, decafShotMg, colaMgPer100Ml, caffeineHalfLifeHours) " +
+                    "VALUES (0, 1320, 480, 1, 0, 345, 375, 9, NULL, 63, 75, 3, 10, 5)",
+            )
+        }
+        helper.runMigrationsAndValidate(dbName, 3, true).use { db ->
+            db.query("SELECT alarmEnabled, bedtimeReminderEnabled FROM settings").use { c ->
+                c.moveToFirst()
+                assertEquals(0, c.getInt(0)) // the user's alarm-off choice survives
+                assertEquals(1, c.getInt(1))
+            }
+            db.query("SELECT COUNT(*) FROM nights").use { c ->
+                c.moveToFirst()
+                assertEquals(1, c.getInt(0))
+            }
+        }
+    }
 }

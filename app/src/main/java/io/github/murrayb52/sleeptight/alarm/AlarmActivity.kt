@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.SleepTightApplication
-import io.github.murrayb52.sleeptight.data.Settings
+import io.github.murrayb52.sleeptight.metrics.AlarmConfig
 import io.github.murrayb52.sleeptight.ui.theme.SleepTightTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -47,13 +47,14 @@ class AlarmActivity : ComponentActivity() {
         setContent {
             SleepTightTheme {
                 val state by container.alarmState.collectAsStateWithLifecycle()
-                val settings by container.nightRepository.settings.collectAsStateWithLifecycle(Settings())
                 LaunchedEffect(state) {
                     if (state !is AlarmState.Ringing) finish()
                 }
+                val ringing = state as? AlarmState.Ringing
                 AlarmScreen(
                     time = DateTimeFormatter.ofPattern(pattern).format(Instant.now().atZone(ZoneId.systemDefault())),
-                    snoozeMinutes = settings.snoozeMinutes,
+                    nextSnoozeMinutes = ringing?.nextSnoozeMinutes,
+                    snoozesUsed = ringing?.snoozesUsed ?: 0,
                     onSnooze = { startService(AlarmRingService.intent(this, AlarmRingService.ACTION_SNOOZE)) },
                     onDismiss = { startService(AlarmRingService.intent(this, AlarmRingService.ACTION_DISMISS)) },
                 )
@@ -63,7 +64,7 @@ class AlarmActivity : ComponentActivity() {
 }
 
 @Composable
-fun AlarmScreen(time: String, snoozeMinutes: Int, onSnooze: () -> Unit, onDismiss: () -> Unit) {
+fun AlarmScreen(time: String, nextSnoozeMinutes: Int?, snoozesUsed: Int, onSnooze: () -> Unit, onDismiss: () -> Unit) {
     Scaffold { padding ->
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp),
@@ -83,20 +84,29 @@ fun AlarmScreen(time: String, snoozeMinutes: Int, onSnooze: () -> Unit, onDismis
                 Text(stringResource(R.string.alarm_dismiss), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
             }
             Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = onSnooze, modifier = width.heightIn(min = 72.dp), shape = RoundedCornerShape(32.dp)) {
+            if (nextSnoozeMinutes != null) {
+                OutlinedButton(onClick = onSnooze, modifier = width.heightIn(min = 72.dp), shape = RoundedCornerShape(32.dp)) {
+                    Text(
+                        stringResource(R.string.alarm_snooze, nextSnoozeMinutes),
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
                 Text(
-                    stringResource(R.string.alarm_snooze, snoozeMinutes),
-                    style = MaterialTheme.typography.titleLarge,
+                    stringResource(R.string.alarm_snoozes_used, snoozesUsed, AlarmConfig().maxSnoozes),
+                    style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
+                    modifier = width,
+                )
+            } else if (snoozesUsed > 0) {
+                Text(
+                    stringResource(R.string.alarm_no_snoozes_left),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = width,
                 )
             }
-            Spacer(Modifier.height(16.dp))
-            Text(
-                stringResource(R.string.alarm_snooze_counted),
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = width,
-            )
         }
     }
 }

@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.alarm.AlarmState
+import io.github.murrayb52.sleeptight.tracking.Notifications
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.Problem
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.State
@@ -115,6 +116,7 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
         message = message,
         actions = HomeActions(
             onGoingToBed = {
+                Notifications.cancelBedtimeReminder(context)
                 val missing = bedTimePermissions.filterNot { p ->
                     when (p) {
                         Manifest.permission.RECORD_AUDIO -> device.micGranted
@@ -461,8 +463,8 @@ private fun RingingCard(state: AlarmState, time: DateTimeFormatter, zone: ZoneId
         }
         CentredText(title, MaterialTheme.typography.titleLarge)
         Button(onClick = actions.onDismissAlarm) { Text(stringResource(R.string.alarm_dismiss)) }
-        if (state is AlarmState.Ringing) {
-            OutlinedButton(onClick = actions.onSnoozeAlarm) { Text(stringResource(R.string.alarm_snooze_short)) }
+        if (state is AlarmState.Ringing && state.nextSnoozeMinutes != null) {
+            OutlinedButton(onClick = actions.onSnoozeAlarm) { Text(stringResource(R.string.alarm_snooze, state.nextSnoozeMinutes)) }
         }
     }
 }

@@ -9,12 +9,10 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Build
 import android.os.IBinder
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import io.github.murrayb52.sleeptight.SleepTightApplication
+import io.github.murrayb52.sleeptight.metrics.SnoozeLadder
 import io.github.murrayb52.sleeptight.metrics.VolumeRamp
 import io.github.murrayb52.sleeptight.tracking.Notifications
 import kotlinx.coroutines.Job
@@ -24,15 +22,15 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 
 /**
- * Rings the alarm: plays the chime on the alarm stream with a 10 → 100 % ramp over 60 s,
- * vibrates, and shows a full-screen alarm. Handles snooze (counted) and dismiss.
+ * Rings the alarm: plays the chime on the alarm stream with a 10 → 100 % ramp over 60 s (no
+ * vibration) and shows a full-screen alarm. Handles snooze (counted, shorter each time, at most 5)
+ * and dismiss.
  */
 class AlarmRingService : Service() {
     private val container get() = (application as SleepTightApplication).container
     private val state get() = container.alarmState
 
     private var track: AudioTrack? = null
-    private var vibrator: Vibrator? = null
     private var rampJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -66,7 +64,18 @@ class AlarmRingService : Service() {
         val now = container.clock.instant()
         state.value = AlarmState.Ringing(nightId, now)
         Notifications.cancelSnoozed(this)
-        container.appScope.launch { container.nightRepository.markAlarmFired(nightId, now) }
+        container.appScope.launch {
+            val repo = container.nightRepository
+            repo.markAlarmFired(nightId, now)
+            // Work out the next snooze, then offer it (or not) on the screen and the notification.
+            val used = repo.getNight(nightId)?.snoozeCount ?: 0
+            val next = SnoozeLadder.minutesFor(used, repo.getSettings().snoozeMinutes)
+            val current = state.value
+            if (current is AlarmState.Ringing && current.nightId == nightId) {
+                state.value = current.copy(nextSnoozeMinutes = next, snoozesUsed = used)
+                Notifications.updateAlarmRinging(this@AlarmRingService, next)
+            }
+        }
         container.alarmEvents.onAlarmFired(nightId)
 
         track = try {
@@ -78,7 +87,6 @@ class AlarmRingService : Service() {
             Log.e(TAG, "Couldn't play the chime", e) // vibration and the screen still wake you
             null
         }
-        startVibration()
         rampJob = container.appScope.launch {
             while (isActive) {
                 val elapsed = Duration.between(now, container.clock.instant())
@@ -95,12 +103,14 @@ class AlarmRingService : Service() {
 
     private fun snooze() {
         val ringing = state.value as? AlarmState.Ringing ?: return stopIfIdle()
+        // No snoozes left: the only way out is Stop.
+        val minutes = ringing.nextSnoozeMinutes ?: return
         stopSound()
         container.appScope.launch {
             val repo = container.nightRepository
             repo.addSnooze(ringing.nightId)
             val count = repo.getNight(ringing.nightId)?.snoozeCount ?: 0
-            val until = container.clock.instant().plus(Duration.ofMinutes(repo.getSettings().snoozeMinutes.toLong()))
+            val until = container.clock.instant().plus(Duration.ofMinutes(minutes.toLong()))
             container.alarmScheduler.scheduleRing(ringing.nightId, until)
             state.value = AlarmState.Snoozed(ringing.nightId, until)
             container.alarmEvents.onSnooze(ringing.nightId, count)
@@ -157,20 +167,6 @@ class AlarmRingService : Service() {
             }
     }
 
-    private fun startVibration() {
-        val v = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            getSystemService(VibratorManager::class.java)?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Vibrator::class.java)
-        }
-        vibrator = v
-        v?.vibrate(
-            VibrationEffect.createWaveform(longArrayOf(0, 600, 1_400), 0),
-            AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build(),
-        )
-    }
-
     private fun stopSound() {
         rampJob?.cancel()
         rampJob = null
@@ -183,8 +179,6 @@ class AlarmRingService : Service() {
             release()
         }
         track = null
-        vibrator?.cancel()
-        vibrator = null
     }
 
     companion object {

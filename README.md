@@ -8,7 +8,8 @@ Yet another sleep app, built to track and improve sleep quality. It's a personal
 
 - **Bed and wake taps.** Tap **Going to bed** at night and **I'm up** in the morning. Those two taps set the night's boundaries, and everything else fits inside them.
 - **Overnight sound monitoring.** A foreground service measures sound level once a second, relative to a rolling 20-minute baseline. It logs noise events and uses per-minute activity as a rough movement proxy. **No audio is ever recorded or stored, only levels.**
-- **Smart alarm.** It wakes you within a window (default 05:45–06:15) when activity suggests light sleep, or at the end of the window otherwise. Volume ramps up over 60 seconds, and every snooze is counted.
+- **Smart alarm.** It wakes you within a window (default 05:45–06:15) when activity suggests light sleep, or at the end of the window otherwise. Volume ramps up over 60 seconds, with no vibration. Snoozes get shorter each time (9 → 7 → 5 → 3 → 2 min) and run out after 5.
+- **Bedtime reminder** 30 minutes before your bedtime goal.
 - **Garmin via Health Connect.** It imports sleep stages and heart rate written by Garmin Connect, trimmed to your bed and wake taps. Without Garmin data, it estimates asleep or awake from activity and labels the estimate as such.
 - **An explainable sleep score (0–100).** Duration, efficiency, deep + REM, interruptions and regularity, each shown as a bar with its points and the raw value behind it.
 - **Goal adherence.** It checks bed by 22:00, 8 hours asleep and at most 1 snooze automatically, from taps and alarm events. These goals feed the regularity metric.
@@ -122,6 +123,9 @@ Taken from [`docs/plan/2026-11-04-v1-build-plan.md`](docs/plan/2026-11-04-v1-bui
 - [ ] 10. Overnight test on a real phone, then fixes
 
 ## Later (designed for, not built)
+
+The full list of agreed work and future ideas is in [`docs/Roadmap.md`](docs/Roadmap.md).
+
 
 - Philips Hue sunrise, through `AlarmEvents.onWakeWindowOpened`
 - Richer Garmin data (HRV, SpO2, respiration, restless moments) behind a `GarminSource` interface

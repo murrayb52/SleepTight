@@ -16,11 +16,13 @@ import androidx.room.RoomDatabase
         CaffeineEntry::class,
         Settings::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         // 1 → 2: Settings.alarmEnabled (defaults to on).
         AutoMigration(from = 1, to = 2),
+        // 2 → 3: Settings.bedtimeReminderEnabled (defaults to on).
+        AutoMigration(from = 2, to = 3),
     ],
 )
 abstract class SleepTightDatabase : RoomDatabase() {
