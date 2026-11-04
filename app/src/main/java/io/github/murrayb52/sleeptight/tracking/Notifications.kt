@@ -114,7 +114,7 @@ object Notifications {
                     addAction(0, context.getString(R.string.alarm_snooze_action), serviceAction(context, AlarmRingService.ACTION_SNOOZE))
                 }
             }
-            .addAction(0, context.getString(R.string.alarm_stop), serviceAction(context, AlarmRingService.ACTION_STOP))
+            .addAction(0, context.getString(R.string.alarm_stop), serviceAction(context, AlarmRingService.ACTION_DISMISS))
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
@@ -129,7 +129,7 @@ object Notifications {
             .setContentTitle(context.getString(R.string.alarm_snoozed_title, time))
             .setContentIntent(openApp(context))
             .setOngoing(true)
-            .addAction(0, context.getString(R.string.alarm_stop), serviceAction(context, AlarmRingService.ACTION_STOP))
+            .addAction(0, context.getString(R.string.alarm_stop), serviceAction(context, AlarmRingService.ACTION_DISMISS))
             .build()
         try {
             manager.notify(SNOOZED_ID, notification)

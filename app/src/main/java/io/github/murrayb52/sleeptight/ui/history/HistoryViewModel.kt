@@ -47,17 +47,22 @@ class HistoryViewModel(repository: NightRepository, private val clock: Clock) : 
     }
 }
 
-data class NightDetailUi(val loading: Boolean = true, val night: NightRowUi? = null, val events: List<NoiseEvent> = emptyList(), val alarmFiredAt: Long? = null, val windowStart: Long? = null, val windowEnd: Long? = null)
+data class NightDetailUi(
+    val loading: Boolean = true,
+    val night: NightRowUi? = null,
+    val events: List<NoiseEvent> = emptyList(),
+    val alarmFiredAt: Long? = null,
+    val goals: Goals = Goals(),
+)
 
 class NightDetailViewModel(repository: NightRepository, nightId: Long) : ViewModel() {
-    val state: StateFlow<NightDetailUi> = combine(repository.night(nightId), repository.noiseEvents(nightId)) { night, events ->
+    val state: StateFlow<NightDetailUi> = combine(repository.night(nightId), repository.noiseEvents(nightId), repository.settings) { night, events, settings ->
         NightDetailUi(
             loading = false,
             night = night?.toRow(mapOf(nightId to events.size)),
             events = events,
             alarmFiredAt = night?.alarmFiredAt,
-            windowStart = night?.alarmWindowStart,
-            windowEnd = night?.alarmWindowEnd,
+            goals = settings.toGoals(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NightDetailUi())
 

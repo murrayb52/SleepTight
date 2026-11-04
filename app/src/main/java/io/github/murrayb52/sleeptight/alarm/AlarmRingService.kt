@@ -49,8 +49,7 @@ class AlarmRingService : Service() {
                 if (state.value !is AlarmState.Ringing) startRinging(nightId)
             }
             ACTION_SNOOZE -> snooze()
-            ACTION_STOP -> dismiss(endNight = true)
-            ACTION_DISMISS -> dismiss(endNight = false)
+            ACTION_DISMISS -> dismiss()
             else -> stopSelf()
         }
         return START_NOT_STICKY
@@ -94,7 +93,7 @@ class AlarmRingService : Service() {
                 track?.setVolume(VolumeRamp.at(elapsed))
                 if (elapsed >= MAX_RING) {
                     Log.i(TAG, "Rang for $MAX_RING with no answer; stopping")
-                    dismiss(endNight = false)
+                    dismiss()
                     break
                 }
                 delay(1_000)
@@ -121,11 +120,10 @@ class AlarmRingService : Service() {
     }
 
     /**
-     * Stops the alarm. With [endNight] (the user pressed Stop), it also closes the night at this
-     * moment, like "I'm up", and stops the sound monitor. Without it (I'm up already closed the
-     * night, or nobody answered for 10 minutes) it only goes quiet.
+     * Stops the alarm. It never ends the night: that's always the separate "I'm up" tap, which the
+     * alarm screen offers straight after Stop.
      */
-    private fun dismiss(endNight: Boolean) {
+    private fun dismiss() {
         val nightId = when (val s = state.value) {
             is AlarmState.Ringing -> s.nightId
             is AlarmState.Snoozed -> s.nightId
@@ -136,16 +134,6 @@ class AlarmRingService : Service() {
         state.value = AlarmState.Idle
         Notifications.cancelSnoozed(this)
         if (nightId != null) container.alarmEvents.onDismiss(nightId)
-        if (endNight) {
-            container.appScope.launch {
-                try {
-                    container.nightRepository.wakeUp()
-                } catch (e: IllegalArgumentException) {
-                    Log.w(TAG, "Couldn't close the night", e) // clock went backwards; I'm up still works
-                }
-                container.nightTracker.stop()
-            }
-        }
         finish()
     }
 
@@ -201,10 +189,7 @@ class AlarmRingService : Service() {
         private const val TAG = "AlarmRingService"
         const val ACTION_RING = "io.github.murrayb52.sleeptight.action.RING_START"
         const val ACTION_SNOOZE = "io.github.murrayb52.sleeptight.action.SNOOZE"
-        /** The user stopped the alarm: also ends the night. */
-        const val ACTION_STOP = "io.github.murrayb52.sleeptight.action.STOP"
-
-        /** Silences the alarm without ending the night (used by I'm up, which ends it itself). */
+        /** Stops the alarm (Stop, I'm up, or no answer for 10 minutes). The night stays open. */
         const val ACTION_DISMISS = "io.github.murrayb52.sleeptight.action.DISMISS"
 
         /** An unanswered alarm stops after this long rather than ringing all day. */

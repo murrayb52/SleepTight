@@ -27,11 +27,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.metrics.ScoreComponent
+import io.github.murrayb52.sleeptight.ui.components.InfoButton
 import io.github.murrayb52.sleeptight.ui.components.Panel
 import io.github.murrayb52.sleeptight.ui.components.ScoreDial
 import io.github.murrayb52.sleeptight.ui.home.formatDuration
@@ -84,7 +87,7 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
         Panel {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 ScoreDial(night.score, size = 84.dp, stroke = 6.dp, textStyle = MaterialTheme.typography.headlineMedium)
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.time_in_bed, formatDuration(night.timeInBed)), style = MaterialTheme.typography.titleMedium)
                     state.alarmFiredAt?.let {
                         Text(
@@ -100,6 +103,19 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
                     if (night.score == null) {
                         Text(stringResource(R.string.score_pending), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
                     }
+                }
+                InfoButton(stringResource(R.string.info_score_title), stringResource(R.string.info_score_body), Modifier.testTag("info-score"))
+            }
+        }
+
+        Panel {
+            Text(stringResource(R.string.score_breakdown), style = MaterialTheme.typography.titleSmall)
+            ScoreComponent.entries.forEach { c ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(componentName(c), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    // Points appear once the night has a score (step 5); the explanation is always there.
+                    Text(stringResource(R.string.points_of, "–", maxPoints(c)), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+                    InfoButton(componentName(c), componentExplainer(c, state.goals), Modifier.testTag("info-${c.name}"))
                 }
             }
         }

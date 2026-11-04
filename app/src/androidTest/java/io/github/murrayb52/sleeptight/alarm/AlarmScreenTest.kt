@@ -25,6 +25,7 @@ class AlarmScreenTest {
     private var stops = 0
     private var done = 0
     private var seen: Long? = null
+    private var ups = 0
     private val since = Instant.parse("2026-11-04T03:52:00Z")
 
     private fun show(next: Int?, used: Int, stopped: Boolean = false, morning: MorningUi? = null) = compose.setContent {
@@ -39,6 +40,7 @@ class AlarmScreenTest {
                 onStop = { stops++ },
                 onSeeNight = { seen = it },
                 onDone = { done++ },
+                onImUp = { ups++ },
                 animate = false,
             )
         }
@@ -67,6 +69,19 @@ class AlarmScreenTest {
         compose.onNodeWithText("Swipe up to snooze").assertDoesNotExist()
         compose.onNodeWithTag("alarmScreen").performTouchInput { swipeUp() }
         assertEquals(0, snoozes)
+    }
+
+    @Test
+    fun stopLeavesTheNightOpenAndOffersImUp() {
+        val zone = ZoneId.of("Africa/Johannesburg")
+        val morning = MorningUi(4, Instant.parse("2026-11-03T20:04:00Z"), wakeTapAt = null, zone = zone, noiseEvents = 2, snoozes = 0)
+        show(next = 9, used = 0, stopped = true, morning = morning)
+        compose.onNodeWithText("Here's your night so far").assertIsDisplayed()
+        compose.onNodeWithText("See the night").assertDoesNotExist()
+        compose.onNodeWithText("I'm up").performClick()
+        assertEquals(1, ups)
+        compose.onNodeWithText("Later").performClick()
+        assertEquals(1, done)
     }
 
     @Test

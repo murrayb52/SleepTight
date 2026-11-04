@@ -132,6 +132,9 @@
     <string name="alarm_snooze_action">Snooze</string>
     <string name="swipe_to_snooze">Swipe up to snooze</string>
     <string name="morning_last_night">Here\'s last night</string>
+    <string name="morning_so_far">Here\'s your night so far</string>
+    <string name="later">Later</string>
+    <string name="now">now</string>
     <string name="tile_in_bed">in bed</string>
     <string name="tile_noise">noise events</string>
     <string name="tile_snoozes">snoozes</string>
@@ -176,4 +179,22 @@
     <string name="coming_soon">Coming soon</string>
     <string name="version">SleepTight %1$s</string>
     <string name="save">Save</string>
+
+    <!-- Score explainers -->
+    <string name="info_about">About %1$s</string>
+    <string name="got_it">Got it</string>
+    <string name="score_breakdown">How the score adds up</string>
+    <string name="points_of">%1$s / %2$d</string>
+    <string name="part_duration">Duration</string>
+    <string name="part_efficiency">Efficiency</string>
+    <string name="part_deep_rem">Deep + REM</string>
+    <string name="part_interruptions">Interruptions</string>
+    <string name="part_regularity">Regularity</string>
+    <string name="info_score_title">Sleep score</string>
+    <string name="info_score_body">A summary of the night from 0 to 100, made of five parts: duration, efficiency, deep and REM sleep, interruptions and regularity. Each part shows its points and what was measured. The dial\'s arc is the score: a full circle is 100.</string>
+    <string name="info_duration_body">How long you were asleep compared with your sleep goal of %1$s. The full %2$d points at or above your goal, and proportionally fewer below it.</string>
+    <string name="info_efficiency_body">The share of your time in bed that you were actually asleep. 0 points at %1$d\u00A0%% or less, rising to the full %2$d points at %3$d\u00A0%% or more. Healthy adults usually manage %4$d\u00A0%% or more.</string>
+    <string name="info_deep_rem_body">The share of your sleep spent in deep and REM sleep, the stages that matter most for physical recovery and memory. 0 points at %1$d\u00A0%% or less, rising to the full %2$d points at %3$d\u00A0%% or more. It needs sleep stages from Garmin; without them, these points are shared out across the other parts.</string>
+    <string name="info_interruptions_body">Starts at %1$d points. Each wake-up (awake for %2$d minutes or more after falling asleep, not counting the last one before you get up) costs %3$d, and each cluster of noise events (events within %4$d minutes of each other) costs %5$d. Never below 0.</string>
+    <string name="info_regularity_body">How well you kept your goals that night, each scored from 0 to 1: in bed by %1$s, asleep for %2$s, at most %3$d snoozes, and a steady bedtime over the last %4$d nights. The average of the four, times %5$d.</string>
 </resources>

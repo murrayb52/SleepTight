@@ -88,8 +88,8 @@ private const val TO_DAY_MILLIS = 1_200
 
 /**
  * The alarm, shown over the lock screen: a night sky with a sun rising slowly while it rings. Swipe
- * up anywhere to snooze; Stop ends the alarm and the night, sweeps the sky to full day, and shows
- * last night's stats.
+ * up anywhere to snooze. Stop silences the alarm, sweeps the sky to full day and shows the night so
+ * far, with "I'm up" (a separate tap) to end it.
  */
 class AlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -122,7 +122,18 @@ class AlarmActivity : ComponentActivity() {
                 onSnooze = { startService(AlarmRingService.intent(this, AlarmRingService.ACTION_SNOOZE)) },
                 onStop = {
                     stoppedNightId = ringing?.nightId
-                    startService(AlarmRingService.intent(this, AlarmRingService.ACTION_STOP))
+                    startService(AlarmRingService.intent(this, AlarmRingService.ACTION_DISMISS))
+                },
+                onImUp = {
+                    container.appScope.launch {
+                        try {
+                            val closed = container.nightRepository.wakeUp()
+                            container.nightTracker.stop()
+                            container.alarmController.disarm(closed?.id)
+                        } catch (e: IllegalArgumentException) {
+                            // Only if the clock moved back past the bed tap; I'm up on Tonight shows why.
+                        }
+                    }
                 },
                 onSeeNight = { id ->
                     startActivity(MainActivity.openNight(this, id))
@@ -165,6 +176,7 @@ fun AlarmExperience(
     onStop: () -> Unit,
     onSeeNight: (Long) -> Unit,
     onDone: () -> Unit,
+    onImUp: () -> Unit = {},
     animate: Boolean = true,
 ) {
     val sky = remember { Animatable(0f) }
@@ -196,7 +208,7 @@ fun AlarmExperience(
         }
         AnimatedVisibility(visible = showMorning, enter = fadeIn(tween(500))) {
             SleepTightTheme(day = true) {
-                MorningSummary(morning, onSeeNight, onDone)
+                MorningSummary(morning, onSeeNight, onDone, onImUp)
             }
         }
     }
@@ -291,7 +303,7 @@ private fun SnoozeMeter(used: Int) {
 }
 
 @Composable
-private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDone: () -> Unit) {
+private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDone: () -> Unit, onImUp: () -> Unit) {
     val time = rememberTimeFormatter()
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 32.dp),
@@ -299,7 +311,12 @@ private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDo
     ) {
         Spacer(Modifier.height(24.dp))
         Text(stringResource(R.string.alarm_good_morning), style = MaterialTheme.typography.displaySmall, color = Palette.DayText)
-        Text(stringResource(R.string.morning_last_night), style = MaterialTheme.typography.titleMedium, color = Palette.DayMuted)
+        val open = morning != null && morning.wakeTapAt == null
+        Text(
+            stringResource(if (open) R.string.morning_so_far else R.string.morning_last_night),
+            style = MaterialTheme.typography.titleMedium,
+            color = Palette.DayMuted,
+        )
         Spacer(Modifier.height(28.dp))
         if (morning != null) {
             ScoreDial(
@@ -314,9 +331,9 @@ private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDo
                 Text(stringResource(R.string.score_pending), style = MaterialTheme.typography.bodySmall, color = Palette.DayMuted, textAlign = TextAlign.Center)
             }
             Spacer(Modifier.height(24.dp))
-            val inBed = morning.wakeTapAt?.let { Duration.between(morning.bedTapAt, it) }
+            val inBed = Duration.between(morning.bedTapAt, morning.wakeTapAt ?: Instant.now())
             Row(Modifier.fillMaxWidth().widthIn(max = 480.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DayTile(inBed?.let { formatDuration(it) } ?: "…", stringResource(R.string.tile_in_bed), Modifier.weight(1f))
+                DayTile(formatDuration(inBed), stringResource(R.string.tile_in_bed), Modifier.weight(1f))
                 DayTile(morning.noiseEvents.toString(), stringResource(R.string.tile_noise), Modifier.weight(1f))
                 DayTile(morning.snoozes.toString(), stringResource(R.string.tile_snoozes), Modifier.weight(1f))
             }
@@ -325,7 +342,7 @@ private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDo
                 stringResource(
                     R.string.night_times,
                     time.format(morning.bedTapAt.atZone(morning.zone)),
-                    morning.wakeTapAt?.let { time.format(it.atZone(morning.zone)) } ?: "…",
+                    morning.wakeTapAt?.let { time.format(it.atZone(morning.zone)) } ?: stringResource(R.string.now),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Palette.DayMuted,
@@ -333,12 +350,15 @@ private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDo
         }
         Spacer(Modifier.weight(1f))
         if (morning != null) {
+            // Still in bed: I'm up is its own tap. Once it's done, offer the night's page.
             Button(
-                onClick = { onSeeNight(morning.nightId) },
+                onClick = { if (open) onImUp() else onSeeNight(morning.nightId) },
                 modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).heightIn(min = 60.dp),
                 shape = RoundedCornerShape(30.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Palette.Ember, contentColor = Palette.OnEmber),
-            ) { Text(stringResource(R.string.see_the_night), style = MaterialTheme.typography.titleLarge) }
+            ) {
+                Text(stringResource(if (open) R.string.im_up else R.string.see_the_night), style = MaterialTheme.typography.titleLarge)
+            }
             Spacer(Modifier.height(10.dp))
         }
         OutlinedButton(
@@ -346,7 +366,7 @@ private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDo
             modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).heightIn(min = 56.dp),
             shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.DayText),
-        ) { Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium) }
+        ) { Text(stringResource(if (open) R.string.later else R.string.done), style = MaterialTheme.typography.titleMedium) }
     }
 }
 

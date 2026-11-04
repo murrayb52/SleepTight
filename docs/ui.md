@@ -43,7 +43,7 @@ Near-black sky with twinkling stars and no nav bar. From the top:
 Shown over the lock screen when the alarm rings.
 
 - **Sunrise**: the sky starts as night and very slowly brightens through violet and ember, with the sun rising from below the bottom edge. It takes the full 10 minutes an alarm can ring to reach dawn. Full day only comes with Stop.
-- **Stop alarm** is the amber button. It stops the alarm **and ends the night at that moment** (like I'm up). The sky then sweeps to full day in 1.2 s and fades into the **morning summary**: "Good morning", last night's dial, time in bed, noise events, snoozes, and bed → up times, with **See the night** and **Done**.
+- **Stop alarm** is the amber button. It only silences the alarm; **I'm up stays a separate tap** (the user's choice, 2026-11-04). The sky sweeps to full day in 1.2 s and fades into the **morning summary**: "Good morning", the night so far (dial, time in bed, noise events, snoozes, bed → now), with an amber **I'm up** and **Later**. After I'm up, it shows the finished night with **See the night** and **Done**.
 - **Swipe up anywhere to snooze.** The screen follows your finger, and a swipe of 140 dp or more snoozes. Snooze lengths are never shown (they're baked in; see [alarm.md](alarm.md)). Five marks show snoozes used. After 5 snoozes the swipe does nothing and the screen says "No snoozes left. Time to get up." Screen readers get a Snooze action.
 
 ## History
@@ -52,7 +52,12 @@ Shown over the lock screen when the alarm rings.
 
 ## One night
 
-Dates and times, the score dial with time in bed, and the alarm time and snoozes. Sleep stages (once there's sleep data), and a noise timeline with the loudest events.
+Dates and times, the score dial with time in bed, and the alarm time and snoozes. Then:
+- **How the score adds up**: all five parts with their full points ("– / 35" until the night has a score)
+- sleep stages, once there's sleep data
+- a noise timeline with the loudest events
+
+**Info icons (ⓘ)** sit next to the score and each part (48 dp touch target, read out as "About Efficiency" and so on). Each opens a short explanation of what's measured and how points are earned. The numbers in it come from `ScoreConfig` and the user's own goals (`ScoreExplainers.kt`), so the text can't drift from the maths.
 
 ## Profile
 

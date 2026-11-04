@@ -59,9 +59,9 @@ An unanswered alarm stops after **10 minutes**.
 
 - **Snooze** adds one to the night's `snoozeCount`, reschedules the ring, shows "Alarm snoozed until 06:24" with a Dismiss action, and calls `AlarmEvents.onSnooze`. The count feeds the regularity snooze factor (goal: at most 1).
 - **Snoozes get shorter and run out** (`SnoozeLadder`). Each snooze is 2 minutes shorter than the last, never under 2: **9 → 7 → 5 → 3 → 2**. The ladder is baked in (`AlarmConfig.baseSnoozeMinutes`), isn't a setting, and the lengths are never shown in the app. `Settings.snoozeMinutes` is no longer used. After **5 snoozes** the alarm screen, the notification and Home offer only Stop, with "No snoozes left. Time to get up." The next snooze length is worked out from the night's count when the alarm starts ringing, so it's right after a restart too. Emulator-checked: snooze 5 is 2 minutes, and the re-ring offers only Stop.
-- **Stop** (the amber button, the notification's Stop action, or Stop on Tonight) stops the sound, cancels pending alarms, calls `AlarmEvents.onDismiss`, and **ends the night at that moment**, like I'm up, stopping the sound monitor too. The alarm screen then shows the morning summary ([ui.md](ui.md#alarm-screen)).
+- **Stop** (the amber button, the notification's Stop action, or Stop on Tonight) stops the sound, cancels pending alarms and calls `AlarmEvents.onDismiss`. **It doesn't end the night**: I'm up is always its own tap, offered on the morning summary straight after Stop ([ui.md](ui.md#alarm-screen)).
 - **Snooze** on the alarm screen is a **swipe up** anywhere.
-- Internally, I'm up and an unanswered alarm use a quiet dismiss that silences the alarm without touching the night.
+- I'm up and an unanswered alarm (after 10 minutes) use the same dismiss.
 
 ## Bedtime reminder
 

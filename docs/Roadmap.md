@@ -11,7 +11,8 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Redesign**: night-sky look, bottom nav (Sleep · History · Profile, hidden in bed), twinkling stars, arc score dials | [ui.md](ui.md) |
 | **Editable alarm**: wake-by wheel and window length on the Sleep tab, on/off chip | [ui.md](ui.md#sleep-tab-before-bed) |
 | **Bedside check** at the bed tap (charger, nightstand, mic towards you), with Don't show again | [ui.md](ui.md#bedside-check) |
-| **Alarm screen**: a very slow sunrise while ringing, swipe up to snooze, Stop ends the night and sweeps to day with a morning summary | [ui.md](ui.md#alarm-screen) |
+| **Alarm screen**: a very slow sunrise while ringing, swipe up to snooze, Stop sweeps to day with the night so far and an I'm up button (a separate tap) | [ui.md](ui.md#alarm-screen) |
+| **Score explainers**: ⓘ icons on the sleep score and each of its five parts, with numbers taken from `ScoreConfig` and your goals | [ui.md](ui.md#one-night) |
 | **History** (7/30 days, averages, week strip, night list), **one night's page**, **Profile** with goals, alarm and reminder settings | [ui.md](ui.md) |
 | **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
 | **Bed and wake taps** define each night. A double tap can't open two nights, and a night left open 16 h prompts for the real wake time | [nights.md](nights.md) |
