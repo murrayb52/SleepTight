@@ -2,9 +2,11 @@ package io.github.murrayb52.sleeptight.ui.home
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.tracking.LiveLevel
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -33,6 +35,8 @@ class HomeScreenTest {
 
     private var micRequests = 0
     private var restarts = 0
+    private var alarmToggles = mutableListOf<Boolean>()
+    private var dismissals = 0
 
     private fun show(state: HomeUiState, device: DeviceState = DeviceState()) = compose.setContent {
         SleepTightTheme {
@@ -47,6 +51,8 @@ class HomeScreenTest {
                     onCloseNightAt = { closedAt = it },
                     onAllowMicrophone = { micRequests++ },
                     onRestartTracking = { restarts++ },
+                    onAlarmToggled = { alarmToggles += it },
+                    onDismissAlarm = { dismissals++ },
                 ),
             )
         }
@@ -163,5 +169,41 @@ class HomeScreenTest {
         compose.onNodeWithText("When did you get up?").assertIsDisplayed()
         compose.onNodeWithText("Close night").performClick()
         assertEquals(LocalTime.of(6, 0), closedAt)
+    }
+
+    @Test
+    fun alarmWindowShowsBeforeBedAndCanBeTurnedOff() {
+        show(HomeUiState(loading = false, zone = zone))
+        compose.onNodeWithText("Wakes you in this window", substring = true).assertExists()
+        compose.onNodeWithTag("alarmSwitch").performScrollTo().performClick()
+        assertEquals(listOf(false), alarmToggles)
+    }
+
+    @Test
+    fun tonightsAlarmShowsInBed() {
+        val start = Instant.parse("2026-11-04T03:45:00Z") // 05:45 SAST
+        show(
+            HomeUiState(
+                loading = false,
+                zone = zone,
+                openNight = openNight,
+                alarm = AlarmUi(tonightStart = start, tonightEnd = start.plus(Duration.ofMinutes(30))),
+            ),
+        )
+        compose.onNodeWithText("Tonight's alarm", substring = true).assertExists()
+    }
+
+    @Test
+    fun ringingAlarmCanBeDismissedFromHome() {
+        show(HomeUiState(loading = false, zone = zone, alarm = AlarmUi(state = AlarmState.Ringing(1, bed))))
+        compose.onNodeWithText("Good morning").assertIsDisplayed()
+        compose.onNodeWithText("Dismiss").performClick()
+        assertEquals(1, dismissals)
+    }
+
+    @Test
+    fun alarmVolumeOffIsFlagged() {
+        show(HomeUiState(loading = false, zone = zone), DeviceState(alarmVolumeOff = true))
+        compose.onNodeWithText("alarm volume is off", substring = true).assertExists()
     }
 }

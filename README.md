@@ -113,7 +113,7 @@ Taken from [`docs/plan/2026-11-04-v1-build-plan.md`](docs/plan/2026-11-04-v1-bui
 - [x] 1. Data model + bed/wake taps + Home screen
 - [x] 2. Metrics module + score + regularity + unit tests
 - [x] 3. NightService: mic dB logging, baseline, noise events, Tonight screen
-- [ ] 4. Alarm: scheduling, smart trigger, ramp, snooze counting, `AlarmEvents` hooks, sounds
+- [x] 4. Alarm: scheduling, smart trigger, ramp, snooze counting, `AlarmEvents` hooks, sounds (generated chime; bundled sound files to follow)
 - [ ] 5. Health Connect import + trimming + fallback estimation
 - [ ] 6. Morning report screen
 - [ ] 7. Caffeine log + caffeine at bedtime

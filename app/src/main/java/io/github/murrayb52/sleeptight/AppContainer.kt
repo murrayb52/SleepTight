@@ -1,6 +1,10 @@
 package io.github.murrayb52.sleeptight
 
 import android.content.Context
+import io.github.murrayb52.sleeptight.alarm.AlarmController
+import io.github.murrayb52.sleeptight.alarm.AlarmEvents
+import io.github.murrayb52.sleeptight.alarm.AlarmScheduler
+import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.data.NightRepository
 import io.github.murrayb52.sleeptight.data.RoomRecordingStore
 import io.github.murrayb52.sleeptight.data.SleepTightDatabase
@@ -32,6 +36,13 @@ class AppContainer(context: Context) {
     /** Written by NightService, read by the UI. */
     val trackingStatus = MutableStateFlow(TrackingStatus())
     val nightTracker: NightTracker = ServiceNightTracker(context.applicationContext, trackingStatus)
+
+    val alarmEvents: AlarmEvents = AlarmEvents.None
+    val alarmScheduler = AlarmScheduler(context.applicationContext)
+
+    /** Written by AlarmRingService, read by the alarm screen and Home. */
+    val alarmState = MutableStateFlow<AlarmState>(AlarmState.Idle)
+    val alarmController = AlarmController(context.applicationContext, nightRepository, alarmScheduler, alarmState, clock)
 }
 
 /**

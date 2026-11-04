@@ -46,6 +46,9 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Exported Room schemas, so MigrationTestHelper can build old database versions in tests.
+    sourceSets.getByName("androidTest").assets.directories.add("$projectDir/schemas")
 }
 
 ksp {
@@ -75,6 +78,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.kotlinx.coroutines.core)
+    // Needed for the score cache and JSON export; added now because room-testing needs a newer
+    // serialization runtime than Room pulls in, and the test classpath is pinned to the app's.
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -83,6 +89,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

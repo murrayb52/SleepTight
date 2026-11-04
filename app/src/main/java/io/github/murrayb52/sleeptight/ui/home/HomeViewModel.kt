@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.SleepTightApplication
+import io.github.murrayb52.sleeptight.alarm.AlarmController
 import io.github.murrayb52.sleeptight.data.NightRepository
 import io.github.murrayb52.sleeptight.tracking.NightTracker
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus
@@ -32,6 +33,7 @@ import java.time.LocalTime
 class HomeViewModel(
     private val repository: NightRepository,
     private val tracker: NightTracker,
+    private val alarm: AlarmController,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -62,9 +64,9 @@ class HomeViewModel(
         nights,
         minuteTicker,
         promptDismissedFor,
-        tracker.status,
+        combine(tracker.status, alarm.state, ::Pair),
         openNightNoise,
-    ) { (open, last, settings), now, dismissed, tracking, noise ->
+    ) { (open, last, settings), now, dismissed, (tracking, alarmState), noise ->
         buildHomeUiState(
             openNight = open,
             lastNight = last,
@@ -75,6 +77,7 @@ class HomeViewModel(
         ).copy(
             tracking = tracking,
             noiseEvents = noise.map { it.toUi() }.sortedByDescending { it.start },
+            alarm = alarmUi(settings, open, alarmState),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -83,13 +86,36 @@ class HomeViewModel(
         viewModelScope.launch {
             val night = repository.goToBed()
             if (trackSound) tracker.start(night.id)
+            if (night.alarmWindowEnd == null) alarm.arm(night, repository.getSettings())
         }
+    }
+
+    /** Turns the alarm on or off; also arms or disarms tonight's if you're already in bed. */
+    fun onAlarmToggled(enabled: Boolean) {
+        viewModelScope.launch {
+            val settings = repository.getSettings().copy(alarmEnabled = enabled)
+            repository.updateSettings(settings)
+            val open = repository.getOpenNight() ?: return@launch
+            if (enabled) alarm.arm(open, settings) else alarm.disarm(open.id)
+        }
+    }
+
+    fun onSnoozeAlarm() {
+        alarm.snooze()
+    }
+
+    fun onDismissAlarm() {
+        alarm.dismiss()
     }
 
     fun onImUp() {
         viewModelScope.launch {
             try {
-                if (repository.wakeUp() != null) tracker.stop()
+                val closed = repository.wakeUp()
+                if (closed != null) {
+                    tracker.stop()
+                    alarm.disarm(closed.id)
+                }
             } catch (e: IllegalArgumentException) {
                 // Only possible if the phone's clock moved back past the bed tap.
                 _message.value = R.string.error_wake_before_bed
@@ -133,7 +159,7 @@ class HomeViewModel(
             return
         }
         viewModelScope.launch {
-            repository.wakeUp(wake)
+            repository.wakeUp(wake)?.let { alarm.disarm(it.id) }
             tracker.stop()
         }
     }
@@ -146,7 +172,12 @@ class HomeViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as SleepTightApplication
-                HomeViewModel(app.container.nightRepository, app.container.nightTracker, app.container.clock)
+                HomeViewModel(
+                    app.container.nightRepository,
+                    app.container.nightTracker,
+                    app.container.alarmController,
+                    app.container.clock,
+                )
             }
         }
     }

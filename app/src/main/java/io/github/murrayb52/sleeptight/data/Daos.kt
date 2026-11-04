@@ -45,6 +45,16 @@ interface NightDao {
     @Query("SELECT * FROM nights ORDER BY bedTapAt DESC")
     fun observeAll(): Flow<List<Night>>
 
+    @Query("UPDATE nights SET alarmWindowStart = :start, alarmWindowEnd = :end WHERE id = :id")
+    suspend fun setAlarmWindow(id: Long, start: Long?, end: Long?)
+
+    /** Records when the alarm first rang; later rings (after snoozes) don't overwrite it. */
+    @Query("UPDATE nights SET alarmFiredAt = :at WHERE id = :id AND alarmFiredAt IS NULL")
+    suspend fun markAlarmFired(id: Long, at: Long)
+
+    @Query("UPDATE nights SET snoozeCount = snoozeCount + 1 WHERE id = :id")
+    suspend fun addSnooze(id: Long)
+
     /** Sets the wake tap only if the night is still open. Returns the number of rows changed. */
     @Query("UPDATE nights SET wakeTapAt = :wakeTapAt WHERE id = :id AND wakeTapAt IS NULL")
     suspend fun close(id: Long, wakeTapAt: Long): Int

@@ -1,6 +1,7 @@
 package io.github.murrayb52.sleeptight.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -15,8 +16,12 @@ import androidx.room.RoomDatabase
         CaffeineEntry::class,
         Settings::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [
+        // 1 → 2: Settings.alarmEnabled (defaults to on).
+        AutoMigration(from = 1, to = 2),
+    ],
 )
 abstract class SleepTightDatabase : RoomDatabase() {
     abstract fun nightDao(): NightDao

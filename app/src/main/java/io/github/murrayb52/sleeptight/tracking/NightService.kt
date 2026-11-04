@@ -18,7 +18,11 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.data.isOpen
+import io.github.murrayb52.sleeptight.metrics.LevelSample
+import io.github.murrayb52.sleeptight.metrics.SmartTrigger
 import io.github.murrayb52.sleeptight.metrics.SoundLevel
+import io.github.murrayb52.sleeptight.metrics.activityPerMinute
+import java.time.Instant
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.Problem
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.State
 import kotlinx.coroutines.CancellationException
@@ -94,6 +98,11 @@ class NightService : Service() {
         status.value = TrackingStatus(State.STARTING, nightId)
         acquireWakeLock()
         val recorder = NightRecorder(nightId, container.recordingStore, container.noiseEvents)
+        val repo = container.nightRepository
+        recorder.seedActivity(
+            activityPerMinute(repo.soundSamples(nightId).map { LevelSample(Instant.ofEpochMilli(it.timestamp), it.dbRelative.toDouble()) }),
+        )
+        val smartAlarm = SmartAlarmCheck(nightId)
         val audio = openAudioRecord()
         if (audio == null) {
             fail(nightId, Problem.MIC_UNAVAILABLE)
@@ -112,6 +121,7 @@ class NightService : Service() {
                 val secondStart = container.clock.instant().minusSeconds(1)
                 val live = recorder.onLevel(secondStart, SoundLevel.dbfs(buffer, filled))
                 status.value = TrackingStatus(State.RECORDING, nightId, live)
+                smartAlarm.check(recorder)
             }
         } catch (e: CancellationException) {
             throw e
@@ -122,6 +132,37 @@ class NightService : Service() {
             audio.stop()
             audio.release()
             withContext(NonCancellable) { recorder.flush() }
+        }
+    }
+
+    /**
+     * Once a minute inside the wake window, asks [SmartTrigger] whether you're stirring. If so, the
+     * alarm is rescheduled to ring now. Only one early ring per night, and none once it has rung.
+     */
+    private inner class SmartAlarmCheck(private val nightId: Long) {
+        private var lastMinute = -1L
+        private var done = false
+
+        suspend fun check(recorder: NightRecorder) {
+            if (done) return
+            val now = container.clock.instant()
+            val minute = now.toEpochMilli() / 60_000
+            if (minute == lastMinute) return
+            lastMinute = minute
+            val night = container.nightRepository.getNight(nightId) ?: return
+            val start = night.alarmWindowStart ?: return
+            val end = night.alarmWindowEnd ?: return
+            if (night.alarmFiredAt != null) {
+                done = true
+                return
+            }
+            // Skip the last minute of the window: the scheduled ring is about to go off anyway.
+            if (now.toEpochMilli() !in start until end - 60_000) return
+            if (SmartTrigger.shouldWakeNow(recorder.activity, now)) {
+                Log.i(TAG, "Smart alarm: stirring detected, ringing early")
+                done = true
+                container.alarmController.ringNow(nightId)
+            }
         }
     }
 

@@ -62,4 +62,14 @@ class NightRepository(
     }
 
     suspend fun deleteNight(night: Night) = nights.delete(night)
+
+    suspend fun setAlarmWindow(nightId: Long, start: Instant?, end: Instant?) =
+        nights.setAlarmWindow(nightId, start?.toEpochMilli(), end?.toEpochMilli())
+
+    suspend fun markAlarmFired(nightId: Long, at: Instant = clock.instant()) = nights.markAlarmFired(nightId, at.toEpochMilli())
+
+    suspend fun addSnooze(nightId: Long) = nights.addSnooze(nightId)
+
+    /** Per-second relative levels recorded so far for a night, oldest first. */
+    suspend fun soundSamples(nightId: Long): List<SoundSample> = db.soundSampleDao().getForNight(nightId)
 }

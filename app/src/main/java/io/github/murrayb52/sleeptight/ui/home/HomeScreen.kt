@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -43,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -52,6 +55,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.Problem
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.State
@@ -73,6 +77,11 @@ data class HomeActions(
     val onRestartTracking: () -> Unit = {},
     val onAllowBattery: () -> Unit = {},
     val onOpenAppSettings: () -> Unit = {},
+    val onAlarmToggled: (Boolean) -> Unit = {},
+    val onSnoozeAlarm: () -> Unit = {},
+    val onDismissAlarm: () -> Unit = {},
+    val onAllowExactAlarms: () -> Unit = {},
+    val onAllowFullScreen: () -> Unit = {},
 )
 
 @Composable
@@ -129,6 +138,11 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
             onRestartTracking = viewModel::onRestartTracking,
             onAllowBattery = { context.startActivity(batteryExemptionIntent(context)) },
             onOpenAppSettings = { context.startActivity(appSettingsIntent(context)) },
+            onAlarmToggled = viewModel::onAlarmToggled,
+            onSnoozeAlarm = viewModel::onSnoozeAlarm,
+            onDismissAlarm = viewModel::onDismissAlarm,
+            onAllowExactAlarms = { context.startActivity(exactAlarmSettingsIntent(context)) },
+            onAllowFullScreen = { context.startActivity(fullScreenSettingsIntent(context)) },
         ),
     )
 }
@@ -184,6 +198,12 @@ private val contentWidth = Modifier.fillMaxWidth().widthIn(max = 480.dp)
 private fun HomeContent(state: HomeUiState, device: DeviceState, actions: HomeActions) {
     val time = rememberTimeFormatter()
 
+    val alarmState = state.alarm.state
+    if (alarmState !is AlarmState.Idle) {
+        RingingCard(alarmState, time, state.zone, actions)
+        Spacer(Modifier.height(24.dp))
+    }
+
     CentredText(stringResource(R.string.app_name), MaterialTheme.typography.headlineLarge, contentWidth)
     Spacer(Modifier.height(8.dp))
 
@@ -212,6 +232,9 @@ private fun HomeContent(state: HomeUiState, device: DeviceState, actions: HomeAc
     )
     Spacer(Modifier.height(32.dp))
 
+    AlarmCard(state.alarm, inBed = open != null, time = time, zone = state.zone, device = device, actions = actions)
+    Spacer(Modifier.height(16.dp))
+
     if (!device.batteryUnrestricted) {
         BatteryCard(device.isSamsung, actions)
         Spacer(Modifier.height(16.dp))
@@ -221,7 +244,7 @@ private fun HomeContent(state: HomeUiState, device: DeviceState, actions: HomeAc
         SoundCard(state.tracking, device, actions)
         Spacer(Modifier.height(16.dp))
         NoiseEventsCard(state.noiseEvents, state.zone, time)
-        if (!device.notificationsGranted) {
+        if (!device.notificationsGranted && state.alarm.tonightEnd == null) {
             Spacer(Modifier.height(16.dp))
             CentredText(
                 stringResource(R.string.notifications_off),
@@ -359,6 +382,94 @@ private fun NoiseEventsCard(events: List<NoiseEventUi>, zone: ZoneId, time: Date
             )
         }
     }
+}
+
+@Composable
+private fun AlarmCard(
+    alarm: AlarmUi,
+    inBed: Boolean,
+    time: DateTimeFormatter,
+    zone: ZoneId,
+    device: DeviceState,
+    actions: HomeActions,
+) {
+    InfoCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(stringResource(R.string.alarm_title), style = MaterialTheme.typography.titleMedium)
+            Switch(
+                checked = if (inBed) alarm.tonightEnd != null else alarm.enabled,
+                onCheckedChange = actions.onAlarmToggled,
+                modifier = Modifier.testTag("alarmSwitch"),
+            )
+        }
+        val windowEnd = time.format(alarm.windowEnd)
+        when {
+            inBed && alarm.firedAt != null ->
+                CentredText(stringResource(R.string.alarm_rang_at, time.format(alarm.firedAt.atZone(zone))), MaterialTheme.typography.bodyLarge)
+            inBed && alarm.tonightStart != null && alarm.tonightEnd != null -> {
+                CentredText(
+                    stringResource(
+                        R.string.alarm_tonight,
+                        time.format(alarm.tonightStart.atZone(zone)),
+                        time.format(alarm.tonightEnd.atZone(zone)),
+                    ),
+                    MaterialTheme.typography.bodyLarge,
+                )
+                CentredText(
+                    stringResource(R.string.alarm_explainer, time.format(alarm.tonightEnd.atZone(zone))),
+                    MaterialTheme.typography.bodySmall,
+                )
+            }
+            inBed -> CentredText(stringResource(R.string.alarm_none_tonight), MaterialTheme.typography.bodyLarge)
+            alarm.enabled -> {
+                CentredText(
+                    stringResource(R.string.alarm_window, time.format(alarm.windowStart), windowEnd),
+                    MaterialTheme.typography.headlineSmall,
+                )
+                CentredText(stringResource(R.string.alarm_explainer, windowEnd), MaterialTheme.typography.bodySmall)
+            }
+            else -> CentredText(stringResource(R.string.alarm_off_tonight), MaterialTheme.typography.bodyMedium)
+        }
+
+        val alarmMatters = if (inBed) alarm.tonightEnd != null else alarm.enabled
+        if (alarmMatters) {
+            if (!device.exactAlarmsAllowed) {
+                Warning(stringResource(R.string.alarm_exact_denied))
+                Button(onClick = actions.onAllowExactAlarms) { Text(stringResource(R.string.allow)) }
+            }
+            if (device.alarmVolumeOff) Warning(stringResource(R.string.alarm_volume_off))
+            if (!device.notificationsGranted) {
+                Warning(stringResource(R.string.alarm_notifications_off))
+            } else if (!device.fullScreenAllowed) {
+                Warning(stringResource(R.string.alarm_full_screen_denied))
+                Button(onClick = actions.onAllowFullScreen) { Text(stringResource(R.string.allow)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RingingCard(state: AlarmState, time: DateTimeFormatter, zone: ZoneId, actions: HomeActions) {
+    InfoCard(warning = true) {
+        val title = when (state) {
+            is AlarmState.Snoozed -> stringResource(R.string.alarm_snoozed_title, time.format(state.until.atZone(zone)))
+            else -> stringResource(R.string.alarm_good_morning)
+        }
+        CentredText(title, MaterialTheme.typography.titleLarge)
+        Button(onClick = actions.onDismissAlarm) { Text(stringResource(R.string.alarm_dismiss)) }
+        if (state is AlarmState.Ringing) {
+            OutlinedButton(onClick = actions.onSnoozeAlarm) { Text(stringResource(R.string.alarm_snooze_short)) }
+        }
+    }
+}
+
+@Composable
+private fun Warning(text: String) {
+    CentredText(text, MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.error))
 }
 
 @Composable

@@ -1,0 +1,81 @@
+# Smart alarm, snoozes, `AlarmEvents` hooks
+
+How the alarm decides when to ring, how it rings, and what's recorded. The decision maths is in `:metrics` (`Alarm.kt`) and the Android side in `app/.../alarm/`.
+
+## Turning it on and off
+
+Home has an **Alarm** switch with the window under it (default **05:45–06:15**, from Settings). It's stored as `Settings.alarmEnabled`, which was added in database version 2 with an automatic migration that keeps all existing data.
+
+- **Before bed**, the switch decides whether the next bed tap arms an alarm.
+- **In bed**, it arms or disarms tonight's alarm directly, and the card shows "Tonight's alarm: 05:45 – 06:15".
+- **I'm up** (or closing an overdue night) disarms everything, including a ringing or snoozed alarm.
+
+## The window
+
+At the bed tap, `WakeWindow.after` picks the next time the start clock time comes round after the bed tap, and the next end time after that, in the night's own time zone:
+
+- A 22:00 bed tap wakes the next morning, and a 01:30 tap the same morning.
+- A bed tap inside the window (say 05:50) gets **tomorrow's** window.
+- A window crossing midnight (23:50–00:20) works, and daylight-saving changes are handled by the zone.
+
+The window is stored on the night (`alarmWindowStart`/`alarmWindowEnd`). If the alarm is disarmed before it ever rang, the window is cleared.
+
+## Scheduling
+
+| What | When | How |
+|---|---|---|
+| Window opens | Window start | Exact, Doze-allowed alarm → `AlarmEvents.onWakeWindowOpened` |
+| Ring | Window end, or earlier if the smart trigger fires | `setAlarmClock`: exact, survives Doze, shows the alarm icon in the status bar |
+| Snooze | Now + snooze length (9 min) | Same `setAlarmClock` ring, rescheduled |
+
+A reboot or a clock or time-zone change clears or shifts alarms. `AlarmReceiver` re-arms the open night's alarm on boot and on clock changes, unless it has already rung or its window has passed. Checked on the emulator: an armed alarm survived a reboot and rang on time.
+
+## Smart trigger
+
+While the sound monitor is running, once a minute inside the window (except its last minute) the service asks `SmartTrigger.shouldWakeNow`:
+
+- Take the mean activity of the last **2 complete minutes**. Activity is seconds per minute more than 8 dB above baseline; see [sound-monitoring.md](sound-monitoring.md).
+- Ring early if that mean is **above the night's 75th percentile** of per-minute activity (nearest-rank) **and** at least **3 active seconds** a minute.
+- Needs at least **30 minutes** of activity history and both recent minutes present. The minute in progress is never used.
+- At most one early ring per night, and none once the alarm has rung.
+
+The 3-second minimum is an addition to the plan: on a dead-quiet night the 75th percentile is 0, so without it a single cough would ring the alarm up to 30 minutes early.
+
+Activity per minute is kept in memory by the recorder and rebuilt from stored samples if the service restarts mid-night. **Without the microphone there's no smart trigger**, and the alarm rings at the end of the window.
+
+## Ringing
+
+`AlarmRingService` (a foreground service of type `mediaPlayback`) is started by the ring alarm. It:
+
+- records `alarmFiredAt` on the night (first ring only, so snoozes don't overwrite it) and calls `AlarmEvents.onAlarmFired`
+- plays the **built-in chime** (`Chime`, a generated C–E–G bell repeating every 3 s, so no audio files are needed) on the **alarm stream**, with the volume ramping from **10 % to 100 % over 60 s**
+- vibrates in a repeating pattern
+- shows a full-screen alarm over the lock screen, with the time, **Dismiss** and **Snooze N min**
+
+If the phone is unlocked and in use, Android shows a heads-up notification with Snooze and Dismiss instead of taking over the screen. Home also shows a "Good morning" card with **Dismiss** and **Snooze** while the alarm is ringing or snoozed.
+
+An unanswered alarm stops after **10 minutes**.
+
+## Snooze and dismiss
+
+- **Snooze** adds one to the night's `snoozeCount`, reschedules the ring, shows "Alarm snoozed until 06:24" with a Dismiss action, and calls `AlarmEvents.onSnooze`. Snoozing is never blocked or limited. The count feeds the regularity snooze factor (goal: at most 1).
+- **Dismiss** stops the sound, cancels pending alarms and calls `AlarmEvents.onDismiss`. It doesn't close the night; that's still **I'm up**.
+
+## `AlarmEvents`
+
+The extension point for things that react to the alarm: `onWakeWindowOpened`, `onAlarmFired`, `onSnooze`, `onDismiss`. v1 uses `AlarmEvents.None`. The Philips Hue sunrise will implement `onWakeWindowOpened`.
+
+## Permissions and warnings
+
+Shown in the alarm card when the alarm is on:
+
+| Situation | What you see |
+|---|---|
+| Alarm volume at 0 | "Your alarm volume is off, so the alarm will only vibrate…" |
+| Exact alarms not allowed (Android 12 only; 13+ grants `USE_EXACT_ALARM` to alarm apps) | Explanation and **Allow**, which opens "Alarms & reminders" |
+| Full-screen notifications not allowed (Android 14+) | It still rings, but you must unlock to stop it. **Allow** opens the setting |
+| Notifications off | No alarm screen or buttons. It rings for up to 10 minutes; open SleepTight to stop it |
+
+## Sounds
+
+Only the generated chime ships so far. The plan's 3–5 CC0 sounds from Freesound need a Freesound account to download, and choosing a sound needs the Settings screen. Both are still to do, and `ASSETS.md` will list sources and licences when sound files are added.

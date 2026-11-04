@@ -1,6 +1,8 @@
 package io.github.murrayb52.sleeptight.ui.home
 
+import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.data.Night
+import io.github.murrayb52.sleeptight.data.Settings
 import io.github.murrayb52.sleeptight.data.NoiseEvent
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import java.time.Duration
@@ -22,6 +24,28 @@ data class HomeUiState(
     val tracking: TrackingStatus = TrackingStatus(),
     /** Noise events so far in the open night, most recent first. */
     val noiseEvents: List<NoiseEventUi> = emptyList(),
+    val alarm: AlarmUi = AlarmUi(),
+)
+
+data class AlarmUi(
+    val enabled: Boolean = true,
+    val windowStart: LocalTime = LocalTime.of(5, 45),
+    val windowEnd: LocalTime = LocalTime.of(6, 15),
+    /** The open night's armed window, or null if no alarm is set for it. */
+    val tonightStart: Instant? = null,
+    val tonightEnd: Instant? = null,
+    val firedAt: Instant? = null,
+    val state: AlarmState = AlarmState.Idle,
+)
+
+fun alarmUi(settings: Settings, openNight: Night?, state: AlarmState) = AlarmUi(
+    enabled = settings.alarmEnabled,
+    windowStart = LocalTime.MIDNIGHT.plusMinutes(settings.alarmWindowStartMinutes.toLong()),
+    windowEnd = LocalTime.MIDNIGHT.plusMinutes(settings.alarmWindowEndMinutes.toLong()),
+    tonightStart = openNight?.alarmWindowStart?.let(Instant::ofEpochMilli),
+    tonightEnd = openNight?.alarmWindowEnd?.let(Instant::ofEpochMilli),
+    firedAt = openNight?.alarmFiredAt?.let(Instant::ofEpochMilli),
+    state = state,
 )
 
 data class NoiseEventUi(val start: Instant, val duration: Duration, val peakDbRelative: Int)
@@ -38,6 +62,9 @@ data class DeviceState(
     val notificationsGranted: Boolean = true,
     val batteryUnrestricted: Boolean = true,
     val isSamsung: Boolean = false,
+    val alarmVolumeOff: Boolean = false,
+    val exactAlarmsAllowed: Boolean = true,
+    val fullScreenAllowed: Boolean = true,
 )
 
 data class OpenNightUi(val nightId: Long, val bedTapAt: Instant, val inBedFor: Duration)

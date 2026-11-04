@@ -1,5 +1,6 @@
 package io.github.murrayb52.sleeptight.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -124,6 +125,8 @@ data class Settings(
     val targetBedtimeMinutes: Int = 22 * 60,
     val targetSleepMinutes: Int = 8 * 60,
     val maxSnoozes: Int = 1,
+    /** Whether bed taps arm the alarm. Added in schema version 2. */
+    @ColumnInfo(defaultValue = "1") val alarmEnabled: Boolean = true,
     val alarmWindowStartMinutes: Int = 5 * 60 + 45,
     val alarmWindowEndMinutes: Int = 6 * 60 + 15,
     val snoozeMinutes: Int = 9,

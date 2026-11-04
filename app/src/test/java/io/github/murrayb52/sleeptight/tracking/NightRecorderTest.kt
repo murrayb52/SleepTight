@@ -102,4 +102,20 @@ class NightRecorderTest {
         val recovered = feed(listOf(-60.0), from = 10)
         assertFalse(recovered.single().micSilent)
     }
+
+    @Test
+    fun `activity per minute counts seconds above the activity threshold`() = runTest {
+        // Baseline -60; minute 0: 60 quiet seconds; minute 1: 5 seconds at +10 dB, the rest quiet.
+        feed(List(60) { -60.0 })
+        feed(List(5) { -50.0 } + List(55) { -60.0 }, from = 60)
+        assertEquals(listOf(0, 5), recorder.activity.map { it.activeSeconds })
+    }
+
+    @Test
+    fun `seeded activity carries on from where it left off`() = runTest {
+        val earlier = listOf(io.github.murrayb52.sleeptight.metrics.MinuteActivity(t0.minusSeconds(60), 7))
+        recorder.seedActivity(earlier)
+        feed(List(3) { -60.0 })
+        assertEquals(listOf(7, 0), recorder.activity.map { it.activeSeconds })
+    }
 }

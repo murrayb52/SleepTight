@@ -2,6 +2,7 @@ package io.github.murrayb52.sleeptight.tracking
 
 import io.github.murrayb52.sleeptight.data.NoiseEvent
 import io.github.murrayb52.sleeptight.data.SoundSample
+import io.github.murrayb52.sleeptight.metrics.MinuteActivity
 import io.github.murrayb52.sleeptight.metrics.NoiseChange
 import io.github.murrayb52.sleeptight.metrics.NoiseEventDetector
 import io.github.murrayb52.sleeptight.metrics.RollingMedian
@@ -45,6 +46,16 @@ class NightRecorder(
     private val pending = ArrayList<SoundSample>(flushEvery)
     private var currentEventId: Long? = null
     private var silentSeconds = 0
+    private val minutes = ArrayList<MinuteActivity>()
+
+    /** Activity per minute so far tonight (for the smart alarm), including the minute in progress. */
+    val activity: List<MinuteActivity> get() = minutes
+
+    /** Restores earlier activity after a service restart, so the smart alarm sees the whole night. */
+    fun seedActivity(earlier: List<MinuteActivity>) {
+        minutes.clear()
+        minutes.addAll(earlier)
+    }
 
     /**
      * Records the level of the second starting at [at]. The baseline is the median of the
@@ -57,6 +68,7 @@ class NightRecorder(
         silentSeconds = if (dbfs <= SoundLevel.FLOOR_DBFS) silentSeconds + 1 else 0
 
         pending += SoundSample(nightId, at.toEpochMilli(), relative.toFloat())
+        countActivity(at, relative)
         detector.onSample(at, relative)?.let { change ->
             val row = NoiseEvent(
                 id = 0,
@@ -75,6 +87,17 @@ class NightRecorder(
         if (pending.size >= flushEvery) flush()
 
         return LiveLevel(at, dbfs, base, relative, micSilent = silentSeconds >= SILENT_SECONDS_FOR_WARNING)
+    }
+
+    private fun countActivity(at: Instant, relative: Double) {
+        val minuteStart = Instant.ofEpochMilli(at.toEpochMilli() / 60_000 * 60_000)
+        val active = if (relative > config.activityThresholdDb) 1 else 0
+        val last = minutes.lastOrNull()
+        if (last != null && last.minuteStart == minuteStart) {
+            minutes[minutes.lastIndex] = last.copy(activeSeconds = last.activeSeconds + active)
+        } else {
+            minutes += MinuteActivity(minuteStart, active)
+        }
     }
 
     /** Writes any batched samples. Call when the night ends or the service stops. */
