@@ -146,3 +146,30 @@ class ActivityTest {
         assertEquals(2, activity.size)
     }
 }
+
+class LevelAccumulatorTest {
+    @Test
+    fun `a second built from 100 ms chunks has the same level as the whole second`() {
+        val second = ShortArray(16_000) { ((it % 200) * 40 - 4000).toShort() }
+        val acc = LevelAccumulator()
+        second.toList().chunked(1_600).forEach { chunk -> acc.add(chunk.toShortArray(), chunk.size) }
+        assertEquals(SoundLevel.dbfs(second), acc.dbfs(), 1e-9)
+    }
+
+    @Test
+    fun `each chunk's own level is available for the live display`() {
+        val loud = ShortArray(1_600) { 16_000 }
+        assertEquals(SoundLevel.dbfs(loud), SoundLevel.dbfs(loud, 1_600), 0.0)
+        val acc = LevelAccumulator()
+        assertEquals(SoundLevel.dbfs(loud), acc.add(loud, loud.size), 1e-9)
+    }
+
+    @Test
+    fun `reset starts a new second, and empty is silence`() {
+        val acc = LevelAccumulator()
+        acc.add(ShortArray(1_600) { 16_000 }, 1_600)
+        acc.reset()
+        assertEquals(SoundLevel.FLOOR_DBFS, acc.dbfs(), 0.0)
+        assertEquals(0, acc.samples)
+    }
+}

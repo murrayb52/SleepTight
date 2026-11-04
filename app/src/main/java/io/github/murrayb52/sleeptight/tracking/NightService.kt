@@ -18,6 +18,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.data.isOpen
+import io.github.murrayb52.sleeptight.metrics.LevelAccumulator
 import io.github.murrayb52.sleeptight.metrics.LevelSample
 import io.github.murrayb52.sleeptight.metrics.SmartTrigger
 import io.github.murrayb52.sleeptight.metrics.SoundLevel
@@ -108,20 +109,29 @@ class NightService : Service() {
             fail(nightId, Problem.MIC_UNAVAILABLE)
             return@withContext
         }
-        val buffer = ShortArray(SAMPLE_RATE) // one second
+        // Read in 100 ms chunks: each chunk updates the live display; ten make the stored second.
+        val chunk = ShortArray(SAMPLE_RATE / CHUNKS_PER_SECOND)
+        val second = LevelAccumulator()
+        var live: LiveLevel? = null
         try {
             audio.startRecording()
             while (currentCoroutineContext().isActive) {
                 var filled = 0
-                while (filled < buffer.size) {
-                    val n = audio.read(buffer, filled, buffer.size - filled)
+                while (filled < chunk.size) {
+                    val n = audio.read(chunk, filled, chunk.size - filled)
                     check(n >= 0) { "AudioRecord.read returned $n" }
                     filled += n
                 }
-                val secondStart = container.clock.instant().minusSeconds(1)
-                val live = recorder.onLevel(secondStart, SoundLevel.dbfs(buffer, filled))
-                status.value = TrackingStatus(State.RECORDING, nightId, live)
-                smartAlarm.check(recorder)
+                val chunkDbfs = second.add(chunk, filled)
+                if (second.samples >= SAMPLE_RATE) {
+                    val secondStart = container.clock.instant().minusSeconds(1)
+                    live = recorder.onLevel(secondStart, second.dbfs())
+                    second.reset()
+                    smartAlarm.check(recorder)
+                }
+                // The display level is relative to the same baseline as the stored one.
+                val baseline = live?.baselineDbfs ?: chunkDbfs
+                status.value = TrackingStatus(State.RECORDING, nightId, live, displayDbRelative = chunkDbfs - baseline)
             }
         } catch (e: CancellationException) {
             throw e
@@ -209,6 +219,7 @@ class NightService : Service() {
     companion object {
         private const val TAG = "NightService"
         const val SAMPLE_RATE = 16_000
+        private const val CHUNKS_PER_SECOND = 10
         private const val EXTRA_NIGHT_ID = "nightId"
         private const val NO_NIGHT = -1L
 

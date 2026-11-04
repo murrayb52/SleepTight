@@ -14,6 +14,9 @@ import java.time.ZoneId
 /** After this long, an open night is probably a forgotten "I'm up" tap, so Home asks about it. */
 val OPEN_NIGHT_PROMPT_AFTER: Duration = Duration.ofHours(16)
 
+/** A night shorter than this is an accidental tap, not a night: I'm up discards it. */
+val SHORTEST_NIGHT: Duration = Duration.ofMinutes(5)
+
 data class HomeUiState(
     val loading: Boolean = true,
     /** Zone used to show times: the device's current zone. */
@@ -42,7 +45,6 @@ fun goalsUi(settings: Settings) = GoalsUi(
 )
 
 data class AlarmUi(
-    val enabled: Boolean = true,
     val windowStart: LocalTime = LocalTime.of(5, 45),
     val windowEnd: LocalTime = LocalTime.of(6, 15),
     val windowMinutes: Int = 30,
@@ -54,7 +56,6 @@ data class AlarmUi(
 )
 
 fun alarmUi(settings: Settings, openNight: Night?, state: AlarmState) = AlarmUi(
-    enabled = settings.alarmEnabled,
     windowStart = LocalTime.MIDNIGHT.plusMinutes(settings.alarmWindowStartMinutes.toLong()),
     windowEnd = LocalTime.MIDNIGHT.plusMinutes(settings.alarmWindowEndMinutes.toLong()),
     windowMinutes = Math.floorMod(settings.alarmWindowEndMinutes - settings.alarmWindowStartMinutes, 24 * 60),

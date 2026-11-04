@@ -63,7 +63,7 @@
     <string name="notification_stopped_text">SleepTight stopped measuring sound levels. Open the app to resume.</string>
 
     <!-- Alarm -->
-    <string name="alarm_explainer">Wakes you gently between %1$s and %2$s, as soon as you start to stir</string>
+    <string name="alarm_explainer">When you tap Going to bed, the alarm is set to wake you gently between %1$s and %2$s, as soon as you start to stir.</string>
     <string name="alarm_tonight">Alarm %1$s – %2$s</string>
     <string name="alarm_none_tonight">No alarm tonight.</string>
     <string name="alarm_rang_at">Alarm rang at %1$s</string>
@@ -101,10 +101,7 @@
     <string name="reminder_at">Reminder %1$s</string>
     <string name="reminder_off">Reminder off</string>
     <string name="wake_me_by">Wake me by</string>
-    <string name="alarm_off_title">No alarm</string>
     <string name="window_chip">%1$d-min window</string>
-    <string name="alarm_on_chip">Alarm on</string>
-    <string name="alarm_off_chip">Alarm off</string>
     <string name="window_title">Wake window</string>
     <string name="window_option">%1$d min</string>
     <string name="last_night_summary">%1$s – %2$s · %3$s in bed</string>
@@ -274,4 +271,41 @@
     <string name="hc_info_use_body">Your sleep stages are trimmed to the times you tapped Going to bed and I\'m up, and used for that night\'s sleep score (deep and REM sleep) and stage chart. Heart rate is stored with the night.</string>
     <string name="hc_info_private_title">It stays on your phone</string>
     <string name="hc_info_private_body">SleepTight has no account and no server. Everything it reads is kept on this phone and goes nowhere else. You can remove its access at any time in Health Connect.</string>
+
+    <!-- Morning report -->
+    <string name="how_you_slept">How you slept</string>
+    <string name="metric_total_sleep">Total sleep</string>
+    <string name="metric_efficiency">Efficiency</string>
+    <string name="metric_fall_asleep">Time to fall asleep</string>
+    <string name="metric_deep">Deep sleep</string>
+    <string name="metric_rem">REM sleep</string>
+    <string name="metric_heart_rate">Heart rate</string>
+    <string name="range_total_sleep">Healthy: 7–9 h</string>
+    <string name="range_efficiency">Healthy: 85\u00A0% or more</string>
+    <string name="range_fall_asleep">Healthy: 30 min or less</string>
+    <string name="range_deep">Typical: 13–23\u00A0% of sleep</string>
+    <string name="range_rem">Typical: 20–25\u00A0% of sleep</string>
+    <string name="range_heart_rate">Lowest and average, from Garmin</string>
+    <string name="heart_rate_value">%1$d / %2$d bpm</string>
+    <string name="verdict_within">In range</string>
+    <string name="verdict_below">Below</string>
+    <string name="verdict_above">Above</string>
+    <string name="your_goals">Your goals</string>
+    <string name="goal_row_bedtime">In bed by %1$s</string>
+    <string name="goal_row_sleep">Asleep for %1$s</string>
+    <plurals name="goal_row_snoozes">
+        <item quantity="one">At most %d snooze</item>
+        <item quantity="other">At most %d snoozes</item>
+    </plurals>
+    <string name="goal_row_consistency">Steady bedtime this week</string>
+    <string name="goal_needs_nights">Needs 3 nights this week</string>
+    <string name="goal_met">Met</string>
+    <string name="goal_partly">Partly</string>
+    <string name="goal_missed">Missed</string>
+    <string name="goal_unknown">Not yet</string>
+    <string name="delete_night">Delete this night</string>
+    <string name="delete_night_title">Delete this night?</string>
+    <string name="delete_night_body">Its sound levels, noise events, sleep stages, heart rate and score are deleted too. This can\'t be undone.</string>
+    <string name="delete">Delete</string>
+    <string name="night_too_short">That was under 5 minutes, so it wasn\'t kept as a night.</string>
 </resources>

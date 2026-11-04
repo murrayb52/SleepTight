@@ -25,9 +25,11 @@ class AlarmController(
 
     fun canScheduleExact() = scheduler.canScheduleExact()
 
-    /** Arms the alarm for [night] if alarms are on. Returns the window, or null if no alarm is set. */
+    /**
+     * Arms the alarm for [night] (every bed tap does; a night's alarm can then be turned off from
+     * the in-bed screen). Returns the window, or null if exact alarms aren't allowed.
+     */
     suspend fun arm(night: Night, settings: Settings): WakeWindow? {
-        if (!settings.alarmEnabled) return null
         val window = WakeWindow.after(
             Instant.ofEpochMilli(night.bedTapAt),
             ZoneId.of(night.zoneId),

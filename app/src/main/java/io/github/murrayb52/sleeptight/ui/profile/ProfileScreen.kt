@@ -22,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -30,6 +32,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -38,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -51,6 +55,7 @@ import io.github.murrayb52.sleeptight.alarm.AlarmSound
 import io.github.murrayb52.sleeptight.health.HealthConnectGarminSource
 import io.github.murrayb52.sleeptight.health.SourceStatus
 import io.github.murrayb52.sleeptight.ui.components.SectionLabel
+import io.github.murrayb52.sleeptight.ui.components.StandardPickerType
 import io.github.murrayb52.sleeptight.ui.history.Tile
 import io.github.murrayb52.sleeptight.ui.home.formatDuration
 import io.github.murrayb52.sleeptight.ui.home.rememberTimeFormatter
@@ -58,7 +63,13 @@ import io.github.murrayb52.sleeptight.ui.theme.Palette
 import java.time.Duration
 import java.time.LocalTime
 
-private enum class Picker { BEDTIME, SLEEP, SNOOZES, WINDOW, SOUND }
+private enum class Picker { BEDTIME, WINDOW, SOUND }
+
+/** Sleep goal: whole hours (the notches). */
+private val SLEEP_GOAL_HOURS = 5f..10f
+
+/** Snooze goal: at most 0 to 5, the most the alarm allows. */
+private val SNOOZE_GOAL = 0f..5f
 
 @Composable
 fun ProfileRoute(onOpenCredits: () -> Unit, viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)) {
@@ -140,8 +151,23 @@ fun ProfileScreen(
 
         Section(stringResource(R.string.section_goals)) {
             ValueRow(stringResource(R.string.goal_bedtime), time.format(bedtime)) { picker = Picker.BEDTIME }
-            ValueRow(stringResource(R.string.goal_sleep), formatDuration(Duration.ofMinutes(s.targetSleepMinutes.toLong()))) { picker = Picker.SLEEP }
-            ValueRow(stringResource(R.string.goal_snoozes), stringResource(R.string.at_most, s.maxSnoozes), last = true) { picker = Picker.SNOOZES }
+            SliderRow(
+                label = stringResource(R.string.goal_sleep),
+                value = s.targetSleepMinutes / 60f,
+                range = SLEEP_GOAL_HOURS,
+                valueText = { formatDuration(Duration.ofMinutes(Math.round(it * 60).toLong())) },
+                onDone = { onSleepGoal(Math.round(it) * 60) },
+                tag = "sleepGoal",
+            )
+            SliderRow(
+                label = stringResource(R.string.goal_snoozes),
+                value = s.maxSnoozes.toFloat(),
+                range = SNOOZE_GOAL,
+                valueText = { stringResource(R.string.at_most, Math.round(it)) },
+                onDone = { onSnoozeGoal(Math.round(it)) },
+                tag = "snoozeGoal",
+                last = true,
+            )
         }
         Section(stringResource(R.string.section_alarm)) {
             ValueRow(stringResource(R.string.alarm_window_row), stringResource(R.string.window_option, window)) { picker = Picker.WINDOW }
@@ -189,22 +215,6 @@ fun ProfileScreen(
 
     when (picker) {
         Picker.BEDTIME -> BedtimeDialog(bedtime, onPick = { onBedtime(it); picker = null }, onDismiss = { picker = null })
-        Picker.SLEEP -> ChoiceDialog(
-            stringResource(R.string.goal_sleep),
-            (12..20).map { it * 30 },
-            s.targetSleepMinutes,
-            label = { formatDuration(Duration.ofMinutes(it.toLong())) },
-            onPick = { onSleepGoal(it); picker = null },
-            onDismiss = { picker = null },
-        )
-        Picker.SNOOZES -> ChoiceDialog(
-            stringResource(R.string.goal_snoozes),
-            listOf(0, 1, 2, 3),
-            s.maxSnoozes,
-            label = { stringResource(R.string.at_most, it) },
-            onPick = { onSnoozeGoal(it); picker = null },
-            onDismiss = { picker = null },
-        )
         Picker.WINDOW -> ChoiceDialog(
             stringResource(R.string.window_title),
             listOf(15, 20, 30, 45, 60),
@@ -242,6 +252,45 @@ private fun ValueRow(label: String, value: String, enabled: Boolean = true, last
             Text(value, style = MaterialTheme.typography.bodyMedium, color = if (enabled) Palette.TextSoft else Palette.Muted)
             if (enabled) Text("›", style = MaterialTheme.typography.titleLarge, color = Palette.Muted)
         }
+    }
+    if (!last) HorizontalDivider(color = Palette.Line, modifier = Modifier.padding(start = 16.dp))
+}
+
+/**
+ * A setting with a notched slider (one notch per whole unit). The value shown follows the thumb;
+ * [onDone] saves it when you let go, so moving it doesn't save (and rescore) on every notch.
+ */
+@Composable
+private fun SliderRow(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    valueText: @Composable (Float) -> String,
+    onDone: (Float) -> Unit,
+    tag: String,
+    last: Boolean = false,
+) {
+    var current by remember(value) { mutableFloatStateOf(value.coerceIn(range)) }
+    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(valueText(current), style = MaterialTheme.typography.bodyMedium, color = Palette.TextSoft)
+        }
+        Slider(
+            value = current,
+            onValueChange = { current = it },
+            onValueChangeFinished = { onDone(current) },
+            valueRange = range,
+            steps = (range.endInclusive - range.start).toInt() - 1,
+            colors = SliderDefaults.colors(
+                thumbColor = Palette.Ember,
+                activeTrackColor = Palette.Ember,
+                inactiveTrackColor = Palette.Outline,
+                activeTickColor = Palette.OnEmber,
+                inactiveTickColor = Palette.Muted,
+            ),
+            modifier = Modifier.testTag(tag),
+        )
     }
     if (!last) HorizontalDivider(color = Palette.Line, modifier = Modifier.padding(start = 16.dp))
 }
@@ -294,7 +343,7 @@ private fun BedtimeDialog(current: LocalTime, onPick: (LocalTime) -> Unit, onDis
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.goal_bedtime)) },
-        text = { TimePicker(state) },
+        text = { StandardPickerType { TimePicker(state) } },
         confirmButton = { TextButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)) }) { Text(stringResource(R.string.save)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
         containerColor = Palette.Card,

@@ -93,12 +93,11 @@ class HomeViewModel(
     }
 
     /** Turns the alarm on or off; also arms or disarms tonight's if you're already in bed. */
+    /** In bed: turns tonight's alarm on or off. Settings are untouched; the next bed tap arms as usual. */
     fun onAlarmToggled(enabled: Boolean) {
         viewModelScope.launch {
-            val settings = repository.getSettings().copy(alarmEnabled = enabled)
-            repository.updateSettings(settings)
             val open = repository.getOpenNight() ?: return@launch
-            if (enabled) alarm.arm(open, settings) else alarm.disarm(open.id)
+            if (enabled) alarm.arm(open, repository.getSettings()) else alarm.disarm(open.id)
         }
     }
 
@@ -141,7 +140,13 @@ class HomeViewModel(
                 if (closed != null) {
                     tracker.stop()
                     alarm.disarm(closed.id)
-                    onNightClosed(closed.id)
+                    if (closed.wakeTapAt!! - closed.bedTapAt < SHORTEST_NIGHT.toMillis()) {
+                        // Going to bed and I'm up within minutes: a mis-tap, so don't keep it.
+                        repository.deleteNight(closed)
+                        _message.value = R.string.night_too_short
+                    } else {
+                        onNightClosed(closed.id)
+                    }
                 }
             } catch (e: IllegalArgumentException) {
                 // Only possible if the phone's clock moved back past the bed tap.

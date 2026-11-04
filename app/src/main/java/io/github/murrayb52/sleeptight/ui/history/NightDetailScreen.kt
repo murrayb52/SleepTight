@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,8 +21,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,11 +38,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.health.GarminImporter
+import io.github.murrayb52.sleeptight.metrics.Goals
+import io.github.murrayb52.sleeptight.metrics.RangeVerdict
+import io.github.murrayb52.sleeptight.metrics.ReferenceRanges
 import io.github.murrayb52.sleeptight.scoring.ScoreCache
 import io.github.murrayb52.sleeptight.metrics.ScoreComponent
 import io.github.murrayb52.sleeptight.ui.components.InfoButton
@@ -53,11 +64,26 @@ import java.time.format.DateTimeFormatter
 fun NightDetailRoute(nightId: Long, onBack: () -> Unit) {
     val viewModel: NightDetailViewModel = viewModel(key = "night-$nightId", factory = NightDetailViewModel.factory(nightId))
     val state by viewModel.state.collectAsStateWithLifecycle()
-    NightDetailScreen(state, onBack, onCheckGarmin = viewModel::onCheckGarmin)
+    NightDetailScreen(state, onBack, onCheckGarmin = viewModel::onCheckGarmin, onDelete = { viewModel.onDelete(onBack) })
 }
 
 @Composable
-fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: () -> Unit = {}) {
+fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: () -> Unit = {}, onDelete: () -> Unit = {}) {
+    var confirmingDelete by rememberSaveable { mutableStateOf(false) }
+    if (confirmingDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmingDelete = false },
+            title = { Text(stringResource(R.string.delete_night_title)) },
+            text = { Text(stringResource(R.string.delete_night_body)) },
+            confirmButton = {
+                TextButton(onClick = { confirmingDelete = false; onDelete() }) { Text(stringResource(R.string.delete), color = Palette.Poor) }
+            },
+            dismissButton = { TextButton(onClick = { confirmingDelete = false }) { Text(stringResource(R.string.cancel)) } },
+            containerColor = Palette.Card,
+            titleContentColor = Palette.Text,
+            textContentColor = Palette.TextSoft,
+        )
+    }
     val time = rememberTimeFormatter()
     val night = state.night
     Column(
@@ -204,6 +230,9 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: (
             }
         }
 
+        if (m != null && score.total != null) HowYouSlept(m, state.heartRate)
+        score?.let { if (it.total != null) YourGoals(it.regularity, state.goals, night) }
+
         Panel {
             Text(stringResource(R.string.noise_events_title, state.events.size), style = MaterialTheme.typography.titleSmall)
             val total = night.timeInBed.toMillis().coerceAtLeast(1)
@@ -236,10 +265,104 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: (
                 }
             }
         }
+
+        TextButton(onClick = { confirmingDelete = true }, modifier = Modifier.heightIn(min = 48.dp).testTag("deleteNight")) {
+            Text(stringResource(R.string.delete_night), color = Palette.Poor)
+        }
     }
 }
 
 private fun percent(x: Double) = Math.round(x * 100).toInt()
+
+/** Each measurement next to its healthy reference range (for context; the score has its own thresholds). */
+@Composable
+private fun HowYouSlept(m: ScoreCache.Metrics, heartRate: HeartRateUi?) {
+    Panel {
+        Text(stringResource(R.string.how_you_slept), style = MaterialTheme.typography.titleSmall)
+        m.totalSleepMinutes?.let {
+            val d = Duration.ofMinutes(it)
+            MetricRow(stringResource(R.string.metric_total_sleep), formatDuration(d), stringResource(R.string.range_total_sleep), ReferenceRanges.totalSleep(d))
+        }
+        m.efficiency?.let {
+            MetricRow(stringResource(R.string.metric_efficiency), stringResource(R.string.raw_percent, percent(it)), stringResource(R.string.range_efficiency), ReferenceRanges.efficiency(it))
+        }
+        m.timeToFallAsleepMinutes?.let {
+            val d = Duration.ofMinutes(it)
+            MetricRow(stringResource(R.string.metric_fall_asleep), formatDuration(d), stringResource(R.string.range_fall_asleep), ReferenceRanges.timeToFallAsleep(d))
+        }
+        m.deepShare?.let {
+            MetricRow(stringResource(R.string.metric_deep), stringResource(R.string.raw_percent, percent(it)), stringResource(R.string.range_deep), ReferenceRanges.deep(it))
+        }
+        m.remShare?.let {
+            MetricRow(stringResource(R.string.metric_rem), stringResource(R.string.raw_percent, percent(it)), stringResource(R.string.range_rem), ReferenceRanges.rem(it))
+        }
+        heartRate?.let {
+            MetricRow(stringResource(R.string.metric_heart_rate), stringResource(R.string.heart_rate_value, it.lowest, it.average), stringResource(R.string.range_heart_rate), null)
+        }
+    }
+}
+
+@Composable
+private fun MetricRow(name: String, value: String, range: String, verdict: RangeVerdict?) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.bodyLarge)
+            Text(range, style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(value, style = MaterialTheme.typography.titleMedium)
+            verdict?.let {
+                Text(
+                    stringResource(
+                        when (it) {
+                            RangeVerdict.WITHIN -> R.string.verdict_within
+                            RangeVerdict.BELOW -> R.string.verdict_below
+                            RangeVerdict.ABOVE -> R.string.verdict_above
+                        },
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (it == RangeVerdict.WITHIN) Palette.Good else Palette.Ember,
+                )
+            }
+        }
+    }
+}
+
+/** How the night did against each goal (the regularity factors, 0 to 1). */
+@Composable
+private fun YourGoals(f: ScoreCache.Factors, goals: Goals, night: NightRowUi) {
+    val time = rememberTimeFormatter()
+    Panel {
+        Text(stringResource(R.string.your_goals), style = MaterialTheme.typography.titleSmall)
+        GoalRow(stringResource(R.string.goal_row_bedtime, time.format(goals.bedtime)), stringResource(R.string.raw_bed_at, time.format(night.bedTapAt.atZone(night.zone))), f.bedtime)
+        GoalRow(stringResource(R.string.goal_row_sleep, formatDuration(goals.sleep)), null, f.duration)
+        GoalRow(
+            pluralStringResource(R.plurals.goal_row_snoozes, goals.maxSnoozes, goals.maxSnoozes),
+            pluralStringResource(R.plurals.snooze_count, night.snoozes, night.snoozes),
+            f.snoozes,
+        )
+        GoalRow(stringResource(R.string.goal_row_consistency), if (f.consistency == null) stringResource(R.string.goal_needs_nights) else null, f.consistency)
+    }
+}
+
+@Composable
+private fun GoalRow(goal: String, detail: String?, factor: Double?) {
+    val (mark, colour, label) = when {
+        factor == null -> Triple("–", Palette.Muted, R.string.goal_unknown)
+        factor >= 0.999 -> Triple("✓", Palette.Good, R.string.goal_met)
+        factor > 0.0 -> Triple("◐", Palette.Ember, R.string.goal_partly)
+        else -> Triple("✕", Palette.Poor, R.string.goal_missed)
+    }
+    val labelText = stringResource(label)
+    Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { stateDescription = labelText }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(mark, style = MaterialTheme.typography.titleMedium, color = colour, modifier = Modifier.width(22.dp))
+        Column(Modifier.weight(1f)) {
+            Text(goal, style = MaterialTheme.typography.bodyLarge)
+            detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Muted) }
+        }
+        Text(labelText, style = MaterialTheme.typography.labelMedium, color = colour)
+    }
+}
 
 /** The measurement behind a score part, shown under its name. */
 @Composable

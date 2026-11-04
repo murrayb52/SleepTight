@@ -75,23 +75,16 @@ class HomeScreenTest {
     fun beforeBedShowsGoingToBedAndTheWakeByWheel() {
         show(HomeUiState(loading = false, zone = zone))
         compose.onNodeWithTag("wakeByWheel").assertExists()
-        compose.onNodeWithText("Wakes you gently between", substring = true).assertExists()
+        compose.onNodeWithText("to wake you gently between", substring = true).assertExists()
         compose.onNodeWithText("Going to bed").performScrollTo().performClick()
         assertEquals(1, bedTaps)
     }
 
     @Test
-    fun alarmChipTurnsTheAlarmOff() {
+    fun beforeBedExplainsTheAlarmIsSetAtTheBedTap() {
         show(HomeUiState(loading = false, zone = zone))
-        compose.onNodeWithTag("alarmSwitch").performScrollTo().performClick()
-        assertEquals(listOf(false), alarmToggles)
-    }
-
-    @Test
-    fun alarmOffHidesTheWheel() {
-        show(HomeUiState(loading = false, zone = zone, alarm = AlarmUi(enabled = false)))
-        compose.onNodeWithTag("wakeByWheel").assertDoesNotExist()
-        compose.onNodeWithText("No alarm").assertExists()
+        compose.onNodeWithText("When you tap Going to bed, the alarm is set", substring = true).assertExists()
+        compose.onNodeWithText("Alarm on").assertDoesNotExist()
     }
 
     @Test

@@ -5,6 +5,13 @@ import android.text.format.DateFormat
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +26,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -58,6 +66,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,6 +80,7 @@ import io.github.murrayb52.sleeptight.ui.components.CentredText
 import io.github.murrayb52.sleeptight.ui.components.HoldButton
 import io.github.murrayb52.sleeptight.ui.components.Panel
 import io.github.murrayb52.sleeptight.ui.components.ScoreDial
+import io.github.murrayb52.sleeptight.ui.components.StandardPickerType
 import io.github.murrayb52.sleeptight.ui.components.StarrySky
 import io.github.murrayb52.sleeptight.ui.components.WheelPicker
 import io.github.murrayb52.sleeptight.ui.theme.Palette
@@ -223,7 +233,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 if (!state.loading) {
-                    if (inBed) TonightContent(state, device, actions) else SleepContent(state, device, actions)
+                    if (inBed) TonightContent(state, device, actions, animate = twinkle) else SleepContent(state, device, actions)
                 }
             }
         }
@@ -260,7 +270,8 @@ private fun SleepContent(state: HomeUiState, device: DeviceState, actions: HomeA
     Spacer(Modifier.height(20.dp))
     Panel(contentWidth) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(stringResource(R.string.bedtime_goal, time.format(state.goals.bedtime)), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.bedtime_goal, time.format(state.goals.bedtime)), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
             Text(
                 if (state.goals.reminderEnabled) {
                     stringResource(R.string.reminder_at, time.format(state.goals.bedtime.minusMinutes(30)))
@@ -269,58 +280,46 @@ private fun SleepContent(state: HomeUiState, device: DeviceState, actions: HomeA
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = Palette.Muted,
+                textAlign = TextAlign.End,
             )
         }
     }
 
-    SetupWarnings(state.alarm.enabled, device, actions)
+    SetupWarnings(alarmOn = true, device, actions)
 
     Spacer(Modifier.height(28.dp))
     val alarm = state.alarm
-    if (alarm.enabled) {
-        Text(stringResource(R.string.wake_me_by).uppercase(), style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
-        Spacer(Modifier.height(4.dp))
-        WheelPicker(
-            values = wakeByValues,
-            selected = alarm.windowEnd,
-            label = { time.format(it) },
-            onSelected = actions.onWakeByChanged,
-            // "6:15 AM" needs a smaller size than "06:15" to fit the selection box.
-            selectedStyle = if (DateFormat.is24HourFormat(LocalContext.current)) {
-                MaterialTheme.typography.displayMedium
-            } else {
-                MaterialTheme.typography.displaySmall
-            },
-            otherStyle = MaterialTheme.typography.headlineLarge.copy(color = Palette.Faint),
-            description = stringResource(R.string.wake_me_by),
-            modifier = contentWidth.testTag("wakeByWheel"),
-            // Round to the nearest 5 minutes if the stored time is off the grid.
-            nearest = { _, t -> Math.floorMod(Math.round((t.hour * 60 + t.minute) / 5.0).toInt(), 24 * 12) },
-        )
-    } else {
-        Spacer(Modifier.height(24.dp))
-        CentredText(stringResource(R.string.alarm_off_title), MaterialTheme.typography.displaySmall, colour = Palette.Faint)
-        Spacer(Modifier.height(24.dp))
-    }
+    Text(stringResource(R.string.wake_me_by).uppercase(), style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
+    Spacer(Modifier.height(4.dp))
+    WheelPicker(
+        values = wakeByValues,
+        selected = alarm.windowEnd,
+        label = { time.format(it) },
+        onSelected = actions.onWakeByChanged,
+        // "6:15 AM" needs a smaller size than "06:15" to fit the selection box.
+        selectedStyle = if (DateFormat.is24HourFormat(LocalContext.current)) {
+            MaterialTheme.typography.displayMedium
+        } else {
+            MaterialTheme.typography.displaySmall
+        },
+        otherStyle = MaterialTheme.typography.headlineLarge.copy(color = Palette.Faint),
+        description = stringResource(R.string.wake_me_by),
+        modifier = contentWidth.testTag("wakeByWheel"),
+        // Round to the nearest 5 minutes if the stored time is off the grid.
+        nearest = { _, t -> Math.floorMod(Math.round((t.hour * 60 + t.minute) / 5.0).toInt(), 24 * 12) },
+    )
 
     Spacer(Modifier.height(12.dp))
     var choosingWindow by rememberSaveable { mutableStateOf(false) }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (alarm.enabled) Chip(stringResource(R.string.window_chip, alarm.windowMinutes)) { choosingWindow = true }
-        Chip(
-            stringResource(if (alarm.enabled) R.string.alarm_on_chip else R.string.alarm_off_chip),
-            modifier = Modifier.testTag("alarmSwitch").semantics { stateDescription = if (alarm.enabled) "On" else "Off" },
-        ) { actions.onAlarmToggled(!alarm.enabled) }
-    }
-    if (alarm.enabled) {
-        Spacer(Modifier.height(10.dp))
-        CentredText(
-            stringResource(R.string.alarm_explainer, time.format(alarm.windowStart), time.format(alarm.windowEnd)),
-            MaterialTheme.typography.bodyMedium,
-            contentWidth,
-            colour = Palette.TextSoft,
-        )
-    }
+    Chip(stringResource(R.string.window_chip, alarm.windowMinutes)) { choosingWindow = true }
+    Spacer(Modifier.height(10.dp))
+    // Nothing is set yet: the alarm is armed by the bed tap, for this window.
+    CentredText(
+        stringResource(R.string.alarm_explainer, time.format(alarm.windowStart), time.format(alarm.windowEnd)),
+        MaterialTheme.typography.bodyMedium,
+        contentWidth,
+        colour = Palette.TextSoft,
+    )
     if (choosingWindow) {
         WindowLengthDialog(alarm.windowMinutes, onPick = { actions.onWindowLengthChanged(it); choosingWindow = false }, onDismiss = { choosingWindow = false })
     }
@@ -475,12 +474,12 @@ private fun BatteryCard(isSamsung: Boolean, actions: HomeActions) {
 // ---------------------------------------------------------------- Tonight (in bed)
 
 @Composable
-private fun TonightContent(state: HomeUiState, device: DeviceState, actions: HomeActions) {
+private fun TonightContent(state: HomeUiState, device: DeviceState, actions: HomeActions, animate: Boolean) {
     val time = rememberTimeFormatter()
     val open = state.openNight ?: return
     val tracking = state.tracking
-
     val listening = device.micGranted && tracking.state == State.RECORDING
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
             Modifier
@@ -496,28 +495,29 @@ private fun TonightContent(state: HomeUiState, device: DeviceState, actions: Hom
                 style = MaterialTheme.typography.bodyMedium,
                 color = Palette.TextSoft,
             )
-    }
+        }
 
-    Spacer(Modifier.height(48.dp))
-    Text(time.format(Instant.now().atZone(state.zone)), style = MaterialTheme.typography.displayLarge, color = Color(0xFFDCE2F2))
-    CentredText(
-        stringResource(R.string.in_bed_since_for, time.format(open.bedTapAt.atZone(state.zone)), formatDuration(open.inBedFor)),
-        MaterialTheme.typography.bodyLarge,
-        contentWidth,
-        Palette.Muted,
-    )
+        Spacer(Modifier.height(48.dp))
+        Text(time.format(Instant.now().atZone(state.zone)), style = MaterialTheme.typography.displayLarge, color = Color(0xFFDCE2F2))
+        CentredText(
+            stringResource(R.string.in_bed_since_for, time.format(open.bedTapAt.atZone(state.zone)), formatDuration(open.inBedFor)),
+            MaterialTheme.typography.bodyLarge,
+            contentWidth,
+            Palette.Muted,
+        )
 
-    Spacer(Modifier.height(20.dp))
-    TonightAlarm(state.alarm, state.zone, time, actions)
+        Spacer(Modifier.height(20.dp))
+        TonightAlarm(state.alarm, state.zone, time, actions)
 
-    Spacer(Modifier.height(28.dp))
-    SoundPanel(state, device, actions, time)
+        Spacer(Modifier.height(28.dp))
+        SoundPanel(state, device, actions, time)
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(24.dp))
-        state.tracking.live?.takeIf { listening }?.let { live ->
-            LevelWave(live.dbRelative, Modifier.fillMaxWidth().height(60.dp))
+        tracking.live?.takeIf { listening }?.let { live ->
+            // The wave follows the 100 ms display level; the text the once-a-second stored level.
+            LevelWave(tracking.displayDbRelative ?: live.dbRelative, Modifier.fillMaxWidth().height(60.dp), animate)
             Text(
                 stringResource(R.string.sound_level_now, Math.round(live.dbRelative).toInt()),
                 style = MaterialTheme.typography.bodySmall,
@@ -528,10 +528,10 @@ private fun TonightContent(state: HomeUiState, device: DeviceState, actions: Hom
                 CentredText(stringResource(R.string.sound_mic_silent), MaterialTheme.typography.bodySmall, contentWidth, Palette.Poor)
             }
             Spacer(Modifier.height(16.dp))
-    }
-    HoldButton(stringResource(R.string.im_up), onHeld = actions.onImUp, modifier = contentWidth.testTag("imUp"))
-    Spacer(Modifier.height(8.dp))
-    CentredText(stringResource(R.string.hold_hint), MaterialTheme.typography.bodySmall, contentWidth, Color(0xFF8790B0))
+        }
+        HoldButton(stringResource(R.string.im_up), onHeld = actions.onImUp, modifier = contentWidth.testTag("imUp"))
+        Spacer(Modifier.height(8.dp))
+        CentredText(stringResource(R.string.hold_hint), MaterialTheme.typography.bodySmall, contentWidth, Color(0xFF8790B0))
     }
 }
 
@@ -662,17 +662,33 @@ private fun NoisePanel(state: HomeUiState, time: DateTimeFormatter) {
     }
 }
 
-/** A gentle wave whose height follows the live level (bigger above the room's baseline). */
+/**
+ * A gentle wave whose height follows the live level (bigger above the room's baseline). The level
+ * arrives ten times a second; the height eases towards it and the wave keeps flowing, so it moves
+ * smoothly instead of jumping with each reading.
+ */
 @Composable
-private fun LevelWave(dbRelative: Double, modifier: Modifier) {
-    val amplitude = (dbRelative.coerceIn(0.0, 30.0) / 30.0).toFloat()
+private fun LevelWave(dbRelative: Double, modifier: Modifier, animate: Boolean = true) {
+    val target = (dbRelative.coerceIn(0.0, 30.0) / 30.0).toFloat()
+    val amplitude by animateFloatAsState(target, animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing), label = "level")
+    val phase = if (animate) {
+        rememberInfiniteTransition(label = "flow").animateFloat(
+            initialValue = 0f,
+            targetValue = 2 * PI.toFloat(),
+            animationSpec = infiniteRepeatable(tween(4_000, easing = LinearEasing)),
+            label = "phase",
+        ).value
+    } else {
+        0f
+    }
     Canvas(modifier) {
         listOf(Color(0xFF3E5BB8) to 1f, Color(0xFF1F2E66) to 0.5f).forEach { (colour, scale) ->
             val path = Path()
             val mid = size.height * 0.6f
-            for (i in 0..60) {
-                val x = size.width * i / 60f
-                val y = mid - (6.dp.toPx() + amplitude * size.height * 0.4f) * scale * sin(i / 60f * 4 * PI.toFloat() + scale * 2).toFloat()
+            for (i in 0..90) {
+                val x = size.width * i / 90f
+                val y = mid - (6.dp.toPx() + amplitude * size.height * 0.4f) * scale *
+                    sin(i / 90f * 4 * PI.toFloat() + scale * 2 - phase * scale.coerceAtLeast(0.7f)).toFloat()
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             drawPath(path, colour, style = Stroke(2.dp.toPx()))
@@ -714,7 +730,7 @@ private fun OverdueNightDialog(
         AlertDialog(
             onDismissRequest = { picking = false },
             title = { Text(stringResource(R.string.wake_picker_title)) },
-            text = { TimePicker(state = pickerState) },
+            text = { StandardPickerType { TimePicker(state = pickerState) } },
             confirmButton = {
                 TextButton(onClick = {
                     picking = false

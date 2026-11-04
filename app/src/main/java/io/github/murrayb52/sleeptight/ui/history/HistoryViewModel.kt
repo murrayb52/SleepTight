@@ -66,10 +66,14 @@ data class NightDetailUi(
     val checkingGarmin: Boolean = false,
     /** The last check's outcome, shown under the button; null before any check. */
     val garminCheck: GarminImporter.Result? = null,
+    /** Lowest and average heart rate in the night, from Garmin; null without heart-rate data. */
+    val heartRate: HeartRateUi? = null,
 )
 
+data class HeartRateUi(val lowest: Int, val average: Int)
+
 class NightDetailViewModel(
-    repository: NightRepository,
+    private val repository: NightRepository,
     private val nightId: Long,
     private val importer: GarminImporter? = null,
 ) : ViewModel() {
@@ -79,9 +83,9 @@ class NightDetailViewModel(
         repository.night(nightId),
         repository.noiseEvents(nightId),
         repository.settings,
-        repository.stageSegments(nightId),
+        combine(repository.stageSegments(nightId), repository.heartRate(nightId), ::Pair),
         check,
-    ) { night, events, settings, segments, (checking, result) ->
+    ) { night, events, settings, (segments, hr), (checking, result) ->
         val score = ScoreCache.decode(night?.scoreJson)
         // Show the segments the score used: Garmin's if there are any, otherwise the estimate.
         val source = if (score?.source == "GARMIN") StageSource.GARMIN else StageSource.ESTIMATED
@@ -96,8 +100,17 @@ class NightDetailViewModel(
             canCheckGarmin = importer != null && night?.wakeTapAt != null && score?.source != "GARMIN",
             checkingGarmin = checking,
             garminCheck = result,
+            heartRate = hr.takeIf { it.isNotEmpty() }?.let { s -> HeartRateUi(s.minOf { it.bpm }, Math.round(s.map { it.bpm }.average()).toInt()) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NightDetailUi())
+
+    /** Deletes this night and everything recorded in it, then calls [onDeleted]. */
+    fun onDelete(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            repository.deleteNight(nightId)
+            onDeleted()
+        }
+    }
 
     /** Looks for Garmin data for this night now (it only appears after the watch syncs). */
     fun onCheckGarmin() {

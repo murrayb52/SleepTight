@@ -88,7 +88,7 @@ The goals come from Settings (`Goals`). Changing a goal changes both the duratio
 
 ## Reference ranges (`ReferenceRanges`)
 
-Context shown next to each metric. They don't affect the score.
+Context shown next to each metric on the night's page (the morning report). They don't affect the score. Each check gives **Below**, **In range** or **Above**; bounds are inclusive and shares are compared at whole percents, as shown.
 
 | Metric | Range |
 |---|---|

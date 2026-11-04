@@ -41,6 +41,41 @@ object SoundLevel {
     }
 }
 
+/**
+ * Builds one second's level from shorter chunks (for example 100 ms), so the live display can update
+ * ten times a second while the stored level is still the RMS of the whole second.
+ */
+class LevelAccumulator {
+    private var sumSquares = 0.0
+    var samples = 0
+        private set
+
+    /** Adds a chunk and returns the chunk's own level (dBFS), for the live display. */
+    fun add(chunk: ShortArray, count: Int = chunk.size): Double {
+        var chunkSum = 0.0
+        for (i in 0 until count) {
+            val s = chunk[i].toDouble()
+            chunkSum += s * s
+        }
+        sumSquares += chunkSum
+        samples += count
+        return levelOf(chunkSum, count)
+    }
+
+    /** The level (dBFS) of everything added since the last [reset]. */
+    fun dbfs(): Double = levelOf(sumSquares, samples)
+
+    fun reset() {
+        sumSquares = 0.0
+        samples = 0
+    }
+
+    private fun levelOf(sum: Double, n: Int): Double {
+        if (n <= 0 || sum == 0.0) return SoundLevel.FLOOR_DBFS
+        return (20 * log10(sqrt(sum / n) / Short.MAX_VALUE)).coerceAtLeast(SoundLevel.FLOOR_DBFS)
+    }
+}
+
 /** Median of the last [capacity] values, kept sorted so each update is cheap. */
 class RollingMedian(private val capacity: Int) {
     private val order = ArrayDeque<Double>()

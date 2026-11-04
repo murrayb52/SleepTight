@@ -8,6 +8,11 @@ data class TrackingStatus(
     val nightId: Long? = null,
     val live: LiveLevel? = null,
     val problem: Problem? = null,
+    /**
+     * The level of the last 100 ms relative to the room's baseline, for the live display only (it's
+     * updated ten times a second; what's stored is [live], once a second).
+     */
+    val displayDbRelative: Double? = null,
 ) {
     enum class State { IDLE, STARTING, RECORDING, STOPPED_WITH_PROBLEM }
 

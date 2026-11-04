@@ -18,8 +18,9 @@ A bottom bar with **Sleep · History · Profile**. It's **hidden while you're in
 
 - Date and greeting, a crescent moon, and the bedtime goal with the reminder time.
 - Setup warnings, only when needed: battery restrictions (with Samsung advice), exact alarms, alarm volume at 0, full-screen alarm permission, notifications.
+- **Nothing is set until Going to bed.** The wheel and window only choose the times: the bed tap arms the alarm for them (and the text says so). To skip the alarm for a night, tap the alarm line on the in-bed screen.
 - **Wake me by**: a wheel in 5-minute steps that wraps round midnight. It saves only after you scroll it and it settles, never just for being shown, and a stored time off the 5-minute grid is shown at the nearest step. The window keeps its length and ends at the chosen time.
-- **Window chip** (15/20/30/45/60 min) and **Alarm on/off chip**. With the alarm off, the wheel is replaced by "No alarm".
+- **Window chip** (15/20/30/45/60 min).
 - **Going to bed** (amber), then **Last night** with its dial, which opens that night.
 
 ## Bedside check
@@ -34,9 +35,9 @@ Near-black sky with twinkling stars and no nav bar. From the top:
 - in bed since / how long
 - the alarm row (tap to turn tonight's alarm off or on; while ringing or snoozed, **Stop alarm** and **Snooze**)
 - the noise panel: a strip from the bed tap to now with a tick per event, and the latest events
-- a gentle wave whose height follows the live level
+- a gentle wave whose height follows the live level: the service publishes a display level every **100 ms** (the stored level stays once a second), the height eases towards it over 300 ms and the wave flows continuously, so it moves smoothly rather than jumping each second
 
-**I'm up** must be **pressed and held for 1.2 s** (it fills as you hold), so a bump in the night can't end the night. Screen readers get a normal click.
+**I'm up** must be **pressed and held for 1.2 s**. A night under **5 minutes** is taken as a mis-tap: I'm up discards it and says so (it fills as you hold), so a bump in the night can't end the night. Screen readers get a normal click.
 
 ## Alarm screen
 
@@ -54,7 +55,10 @@ Shown over the lock screen when the alarm rings.
 
 Dates and times, then the score dial with time asleep, time to fall asleep and efficiency, the alarm time and snoozes, and where the data came from ("Sleep stages from Garmin" or "Estimated from overnight sound"). Then:
 - **How the score adds up**: each part with its points out of its maximum (scaled up when Deep + REM's points are shared out), the measurement behind it (7 h 29 min, 93 %, 1 wake-up and 1 noise cluster, bed time and snoozes) and a bar. Before a night is scored, parts show "– / 35".
-- **Sleep stages**: a chart from bed to wake. Garmin nights get four rows (awake, REM, light, deep); estimated nights get two (awake, asleep), since there's no stage estimate
+- **Sleep stages**: a chart from bed to wake. Garmin nights get four rows (awake, REM, light, deep); estimated nights get two (awake, asleep), since there's no stage estimate. **Check for Garmin data** sits here while the night has no Garmin stages
+- **How you slept** (the morning report, step 6): total sleep, efficiency, time to fall asleep, and with Garmin deep and REM shares, each beside its healthy reference range (`ReferenceRanges`) marked **In range**, **Below** or **Above**; plus lowest and average heart rate from Garmin
+- **Your goals**: in bed by the bedtime goal, asleep for the sleep goal, snoozes within the limit, and a steady bedtime this week, each **Met** (✓), **Partly** (◐), **Missed** (✕) or **Not yet** (needs 3 nights), from the night's regularity factors
+- **Delete this night** at the bottom, after a confirmation: removes it with everything recorded in it
 - a noise timeline with the loudest events
 
 **Info icons (ⓘ)** sit next to the score and each part (48 dp touch target, read out as "About Efficiency" and so on). Each opens a short explanation of what's measured and how points are earned. The numbers in it come from `ScoreConfig` and the user's own goals (`ScoreExplainers.kt`), so the text can't drift from the maths.
@@ -62,7 +66,7 @@ Dates and times, then the score dial with time asleep, time to fall asleep and e
 ## Profile
 
 All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings:
-- **Goals**: bedtime (clock picker), sleep (6–10 h in half hours), snoozes (0–3)
+- **Goals**: bedtime (clock picker), sleep (a slider, 5–10 h in 1-hour notches), snoozes (a slider, at most 0–5). Sliders save when you let go
 - **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds))
 - **Reminders**: bedtime reminder and bedside check switches
 - **Data**: Garmin and export, both coming soon

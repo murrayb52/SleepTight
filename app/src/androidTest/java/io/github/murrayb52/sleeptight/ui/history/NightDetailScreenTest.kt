@@ -2,6 +2,7 @@ package io.github.murrayb52.sleeptight.ui.history
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.murrayb52.sleeptight.metrics.Goals
 import io.github.murrayb52.sleeptight.ui.theme.SleepTightTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -87,8 +89,30 @@ class NightDetailScreenTest {
         compose.onNodeWithText("7 h 36 min asleep").assertIsDisplayed()
         compose.onNodeWithText("Estimated from overnight sound").assertExists()
         compose.onNodeWithText("42 / 44").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("92\u00A0%").performScrollTo().assertIsDisplayed()
+        // Shown in the breakdown and again in How you slept.
+        compose.onAllNodesWithText("92\u00A0%")[0].performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Needs Garmin stages", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("1 wake-up, 1 noise cluster").performScrollTo().assertIsDisplayed()
+
+        // Morning report: measurements against reference ranges, and the goals.
+        compose.onNodeWithText("How you slept").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Healthy: 7–9 h").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Your goals").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Needs 3 nights this week").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun deletingANightAsksFirst() {
+        var deleted = 0
+        compose.setContent {
+            SleepTightTheme { NightDetailScreen(NightDetailUi(loading = false, night = night), onBack = {}, onDelete = { deleted++ }) }
+        }
+        compose.onNodeWithTag("deleteNight").performScrollTo().performClick()
+        compose.onNodeWithText("Delete this night?").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        assertEquals(0, deleted)
+        compose.onNodeWithTag("deleteNight").performScrollTo().performClick()
+        compose.onNodeWithText("Delete").performClick()
+        assertEquals(1, deleted)
     }
 }

@@ -16,6 +16,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Credits in the app**: Profile → About lists every bundled sound and the typeface, with links and the font's licence text | [ui.md](ui.md#profile), [ASSETS.md](../ASSETS.md) |
 | **A sleep score for every night**: from Garmin stages when there are some, otherwise estimated from overnight sound; breakdown with the measurements behind each part and a sleep-stage chart | [metrics.md](metrics.md#scoring-in-the-app), [ui.md](ui.md#one-night) |
 | **Garmin via Health Connect**: sleep stages and heart rate from Garmin Connect only, trimmed to the taps; connect in Profile; retried after syncs; nights without Garmin are estimated from sound | [garmin.md](garmin.md) |
+| **Morning report**: each night's page shows the score breakdown, stages, measurements against healthy ranges, how you did against your goals, heart rate, noise, and lets you delete a night | [ui.md](ui.md#one-night) |
 | **Score explainers**: ⓘ icons on the sleep score and each of its five parts, with numbers taken from `ScoreConfig` and your goals | [ui.md](ui.md#one-night) |
 | **History** (7/30 days, averages, week strip, night list), **one night's page**, **Profile** with goals, alarm and reminder settings | [ui.md](ui.md) |
 | **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
@@ -29,8 +30,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 
 ## Next: v1 build order (remaining)
 
-6. Morning report: the night's page already has the score breakdown, stage chart and noise timeline; still to add are metrics with reference ranges, goal adherence for the night, and caffeine at bedtime (with step 7)
-7. Caffeine log and caffeine at bedtime
+7. Caffeine log and caffeine at bedtime (shown on the night's page too)
 8. Trends and sleep debt
 9. JSON export
 10. Overnight test on the phone, then fixes

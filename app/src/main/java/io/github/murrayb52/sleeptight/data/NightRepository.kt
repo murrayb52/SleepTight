@@ -41,6 +41,8 @@ class NightRepository(
 
     fun stageSegments(nightId: Long): Flow<List<SleepStageSegment>> = db.sleepStageSegmentDao().observeForNight(nightId)
 
+    fun heartRate(nightId: Long): Flow<List<HeartRateSample>> = db.heartRateSampleDao().observeForNight(nightId)
+
     suspend fun noiseEventsOnce(nightId: Long): List<NoiseEvent> = db.noiseEventDao().getForNight(nightId)
 
     suspend fun getSettings(): Settings = settingsDao.get() ?: Settings()
@@ -74,6 +76,11 @@ class NightRepository(
     }
 
     suspend fun deleteNight(night: Night) = nights.delete(night)
+
+    /** Deletes a night and everything recorded in it (sound levels, noise, stages, heart rate). */
+    suspend fun deleteNight(id: Long) {
+        nights.get(id)?.let { nights.delete(it) }
+    }
 
     suspend fun setAlarmWindow(nightId: Long, start: Instant?, end: Instant?) =
         nights.setAlarmWindow(nightId, start?.toEpochMilli(), end?.toEpochMilli())

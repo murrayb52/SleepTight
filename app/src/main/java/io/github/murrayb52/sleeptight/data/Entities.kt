@@ -125,7 +125,7 @@ data class Settings(
     val targetBedtimeMinutes: Int = 22 * 60,
     val targetSleepMinutes: Int = 8 * 60,
     val maxSnoozes: Int = 1,
-    /** Whether bed taps arm the alarm. Added in schema version 2. */
+    /** Unused since 2026-11-04: every bed tap arms the alarm. Kept so old data reads. Added in schema version 2. */
     @ColumnInfo(defaultValue = "1") val alarmEnabled: Boolean = true,
     /** A notification 30 minutes before the bedtime goal. Added in schema version 3. */
     @ColumnInfo(defaultValue = "1") val bedtimeReminderEnabled: Boolean = true,

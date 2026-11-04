@@ -141,6 +141,9 @@ interface HeartRateSampleDao {
 
     @Query("SELECT * FROM heart_rate_samples WHERE nightId = :nightId ORDER BY timestamp")
     suspend fun getForNight(nightId: Long): List<HeartRateSample>
+
+    @Query("SELECT * FROM heart_rate_samples WHERE nightId = :nightId ORDER BY timestamp")
+    fun observeForNight(nightId: Long): Flow<List<HeartRateSample>>
 }
 
 @Dao
