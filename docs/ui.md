@@ -63,6 +63,6 @@ Dates and times, the score dial with time in bed, and the alarm time and snoozes
 
 All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings:
 - **Goals**: bedtime (clock picker), sleep (6–10 h in half hours), snoozes (0–3)
-- **Alarm**: wake window, sound (Chime; more to come)
+- **Alarm**: wake window, sound (a picker with previews; see [alarm.md](alarm.md#sounds))
 - **Reminders**: bedtime reminder and bedside check switches
 - **Data**: Garmin and export, both coming soon

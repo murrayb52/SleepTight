@@ -88,4 +88,14 @@ Shown in the alarm card when the alarm is on:
 
 ## Sounds
 
-Only the generated chime ships so far. The plan's 3–5 CC0 sounds from Freesound need a Freesound account to download, and choosing a sound needs the Settings screen. Both are still to do, and `ASSETS.md` will list sources and licences when sound files are added.
+Six sounds (`AlarmSound`), chosen in **Profile → Alarm → Sound**:
+
+| Sound | Source |
+|---|---|
+| Chime (default) | generated in code (`Chime`), so the app works with no audio files |
+| Birdsong, Morning piano, Kalimba drops, Kalimba, Music box | CC0 recordings from Freesound in `res/raw`; sources and preparation in [`ASSETS.md`](../ASSETS.md) |
+
+- The choice is stored as a key in `Settings.alarmSound` (null = chime). An unknown key, or a file that won't play, falls back to the chime.
+- Bundled sounds loop with `MediaPlayer` on the alarm stream; the chime loops with a static `AudioTrack`. Both get the same 10 → 100 % ramp (`AlarmPlayer`).
+- In the picker, tapping a sound selects it and plays a preview at half volume on the alarm stream, so it follows the alarm volume. The preview stops on the next tap or when the picker closes.
+- Emulator-checked: with Birdsong selected, the ring plays a looping `MediaPlayer` with `USAGE_ALARM`.

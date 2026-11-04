@@ -36,6 +36,7 @@ class ProfileViewModel(private val repository: NightRepository) : ViewModel() {
     fun onWindow(minutes: Int) = update { it.copy(alarmWindowStartMinutes = Math.floorMod(it.alarmWindowEndMinutes - minutes, 24 * 60)) }
     fun onReminder(on: Boolean) = update { it.copy(bedtimeReminderEnabled = on) }
     fun onBedsideCheck(on: Boolean) = update { it.copy(bedsideCheckEnabled = on) }
+    fun onSound(key: String?) = update { it.copy(alarmSound = key) }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {

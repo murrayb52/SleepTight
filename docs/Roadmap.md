@@ -12,6 +12,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Editable alarm**: wake-by wheel and window length on the Sleep tab, on/off chip | [ui.md](ui.md#sleep-tab-before-bed) |
 | **Bedside check** at the bed tap (charger, nightstand, mic towards you), with Don't show again | [ui.md](ui.md#bedside-check) |
 | **Alarm screen**: a very slow sunrise while ringing, swipe up to snooze, Stop sweeps to day with the night so far and an I'm up button (a separate tap) | [ui.md](ui.md#alarm-screen) |
+| **Alarm sounds**: the generated chime plus five CC0 Freesound recordings (birdsong, piano, two kalimbas, music box), chosen and previewed in Profile | [alarm.md](alarm.md#sounds) |
 | **Score explainers**: ⓘ icons on the sleep score and each of its five parts, with numbers taken from `ScoreConfig` and your goals | [ui.md](ui.md#one-night) |
 | **History** (7/30 days, averages, week strip, night list), **one night's page**, **Profile** with goals, alarm and reminder settings | [ui.md](ui.md) |
 | **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
@@ -34,7 +35,6 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 
 ## Agreed, not built yet
 
-- **Bundled alarm sounds**: 3–5 CC0 sounds from Freesound (account `sound_the_alarm` created 2026-11-04; downloading needs an API key), listed with sources and licences in `ASSETS.md`, plus a sound picker in Profile. The generated chime stays as the fallback.
 - **Sleep stages and score on the night page and dials** once step 5 provides sleep data (Garmin or the activity estimate).
 - **Opt-in loud-moment playback**: the loudest 5 short clips per night, kept for 7 nights, with a hard size cap. It's the one planned exception to "never store audio". Spec in the [v1 plan's "Later" list](plan/2026-11-04-v1-build-plan.md#later-not-v1-but-design-for-it).
 

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.alarm.AlarmSound
 import io.github.murrayb52.sleeptight.ui.components.SectionLabel
 import io.github.murrayb52.sleeptight.ui.history.Tile
 import io.github.murrayb52.sleeptight.ui.home.formatDuration
@@ -49,7 +50,7 @@ import io.github.murrayb52.sleeptight.ui.theme.Palette
 import java.time.Duration
 import java.time.LocalTime
 
-private enum class Picker { BEDTIME, SLEEP, SNOOZES, WINDOW }
+private enum class Picker { BEDTIME, SLEEP, SNOOZES, WINDOW, SOUND }
 
 @Composable
 fun ProfileRoute(viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)) {
@@ -62,6 +63,7 @@ fun ProfileRoute(viewModel: ProfileViewModel = viewModel(factory = ProfileViewMo
         onWindow = viewModel::onWindow,
         onReminder = viewModel::onReminder,
         onBedsideCheck = viewModel::onBedsideCheck,
+        onSound = viewModel::onSound,
     )
 }
 
@@ -74,6 +76,7 @@ fun ProfileScreen(
     onWindow: (Int) -> Unit = {},
     onReminder: (Boolean) -> Unit = {},
     onBedsideCheck: (Boolean) -> Unit = {},
+    onSound: (String?) -> Unit = {},
 ) {
     val time = rememberTimeFormatter()
     val s = state.settings
@@ -102,7 +105,7 @@ fun ProfileScreen(
         }
         Section(stringResource(R.string.section_alarm)) {
             ValueRow(stringResource(R.string.alarm_window_row), stringResource(R.string.window_option, window)) { picker = Picker.WINDOW }
-            ValueRow(stringResource(R.string.alarm_sound_row), stringResource(R.string.sound_chime), enabled = false, last = true) {}
+            ValueRow(stringResource(R.string.alarm_sound_row), stringResource(AlarmSound.of(s.alarmSound).label), last = true) { picker = Picker.SOUND }
         }
         Section(stringResource(R.string.section_reminders)) {
             ToggleRow(stringResource(R.string.reminder_row), s.bedtimeReminderEnabled, onReminder)
@@ -141,6 +144,7 @@ fun ProfileScreen(
             onPick = { onWindow(it); picker = null },
             onDismiss = { picker = null },
         )
+        Picker.SOUND -> SoundPickerDialog(AlarmSound.of(s.alarmSound), onPick = onSound, onDismiss = { picker = null })
         null -> Unit
     }
 }

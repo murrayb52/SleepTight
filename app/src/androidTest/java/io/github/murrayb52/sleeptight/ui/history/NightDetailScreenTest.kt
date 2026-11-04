@@ -40,14 +40,15 @@ class NightDetailScreenTest {
         compose.onNodeWithText("– / 20").assertExists()
     }
 
+    // The explainers use a non-breaking space before "%" so "90" and "%" never split across lines.
     @Test
     fun efficiencyInfoExplainsItsThresholds() {
         show()
         compose.onNodeWithTag("info-EFFICIENCY").performScrollTo().performClick()
-        compose.onNodeWithText("0 points at 70 % or less", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("90 % or more", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("0 points at 70\u00A0% or less", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("90\u00A0% or more", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Got it").performClick()
-        compose.onNodeWithText("0 points at 70 % or less", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("0 points at 70\u00A0% or less", substring = true).assertDoesNotExist()
     }
 
     @Test

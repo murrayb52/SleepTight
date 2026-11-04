@@ -4,9 +4,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -15,10 +12,12 @@ import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.metrics.SnoozeLadder
 import io.github.murrayb52.sleeptight.metrics.VolumeRamp
 import io.github.murrayb52.sleeptight.tracking.Notifications
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 
 /**
@@ -30,7 +29,7 @@ class AlarmRingService : Service() {
     private val container get() = (application as SleepTightApplication).container
     private val state get() = container.alarmState
 
-    private var track: AudioTrack? = null
+    private var player: AlarmPlayer? = null
     private var rampJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -66,6 +65,18 @@ class AlarmRingService : Service() {
         Notifications.cancelSnoozed(this)
         container.appScope.launch {
             val repo = container.nightRepository
+            // The chosen sound (falls back to the chime). Started here, then the ramp takes over.
+            val sound = AlarmSound.of(repo.getSettings().alarmSound)
+            withContext(Dispatchers.Main) {
+                if (state.value is AlarmState.Ringing && player == null) {
+                    player = try {
+                        AlarmPlayer.create(this@AlarmRingService, sound).apply { start(VolumeRamp.at(Duration.ZERO)) }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Couldn't play the alarm sound", e) // the screen still wakes you
+                        null
+                    }
+                }
+            }
             repo.markAlarmFired(nightId, now)
             // Work out the next snooze, then offer it (or not) on the screen and the notification.
             val used = repo.getNight(nightId)?.snoozeCount ?: 0
@@ -78,19 +89,10 @@ class AlarmRingService : Service() {
         }
         container.alarmEvents.onAlarmFired(nightId)
 
-        track = try {
-            buildTrack().apply {
-                setVolume(VolumeRamp.at(Duration.ZERO))
-                play()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Couldn't play the chime", e) // vibration and the screen still wake you
-            null
-        }
         rampJob = container.appScope.launch {
             while (isActive) {
                 val elapsed = Duration.between(now, container.clock.instant())
-                track?.setVolume(VolumeRamp.at(elapsed))
+                player?.setVolume(VolumeRamp.at(elapsed))
                 if (elapsed >= MAX_RING) {
                     Log.i(TAG, "Rang for $MAX_RING with no answer; stopping")
                     dismiss()
@@ -146,43 +148,11 @@ class AlarmRingService : Service() {
         stopSelf()
     }
 
-    private fun buildTrack(): AudioTrack {
-        val pcm = Chime.generate()
-        return AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build(),
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(Chime.SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build(),
-            )
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .setBufferSizeInBytes(pcm.size * 2)
-            .build()
-            .apply {
-                write(pcm, 0, pcm.size)
-                setLoopPoints(0, pcm.size, -1)
-            }
-    }
-
     private fun stopSound() {
         rampJob?.cancel()
         rampJob = null
-        track?.run {
-            try {
-                stop()
-            } catch (e: IllegalStateException) {
-                // Already stopped.
-            }
-            release()
-        }
-        track = null
+        player?.release()
+        player = null
     }
 
     companion object {
