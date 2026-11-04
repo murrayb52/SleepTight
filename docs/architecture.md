@@ -36,7 +36,7 @@ flowchart LR
 | Module | What it is | Depends on | Status |
 |---|---|---|---|
 | `:app` | The Android app: UI, storage, services, alarm, Health Connect, export | `:metrics`, AndroidX | Scaffold only |
-| `:metrics` | Pure Kotlin/JVM maths: night metrics, sleep score, regularity, caffeine at bedtime, sleep debt | Kotlin stdlib only | Empty |
+| `:metrics` | Pure Kotlin/JVM maths: night metrics, sleep score, regularity, caffeine at bedtime, sleep debt | Kotlin stdlib only | `NightDate` only |
 
 `:metrics` is kept separate so the build itself enforces "no Android here". That makes every number the app shows testable with fast JVM unit tests on synthetic nights, without an emulator. `:app` converts Room entities into `:metrics` input types and stores the results.
 
@@ -44,8 +44,8 @@ flowchart LR
 
 | Package | Component | Responsibility | Status |
 |---|---|---|---|
-| `data` | Room entities, DAOs, `NightRepository` | The single place that reads and writes data. Exposes `Flow`s to the UI and recomputes scores | Planned (step 1) |
-| `ui` | Screens + ViewModels | Home, Tonight, Morning report, Trends, Caffeine, Settings. Screens are stateless, and ViewModels hold state | Placeholder |
+| `data` | Room entities, DAOs, `NightRepository` | The single place that reads and writes data. Exposes `Flow`s to the UI and recomputes scores | Built (step 1); score recompute arrives with steps 5–6 |
+| `ui` | Screens + ViewModels | Home, Tonight, Morning report, Trends, Caffeine, Settings. Screens are stateless, and ViewModels hold state | Home built (step 1) |
 | `tracking` | `NightService` | Foreground service (`microphone` type). Reads `AudioRecord`, computes dB per second, keeps a rolling baseline, detects noise events, and batches writes. Never stores audio | Planned (step 3) |
 | `alarm` | `AlarmScheduler`, `AlarmReceiver`, `AlarmActivity`, `AlarmEvents` | Schedules the window with `setAlarmClock`, runs the smart trigger, rings with a volume ramp and counts snoozes | Planned (step 4) |
 | `health` | `HealthConnectImporter` behind `GarminSource` | Reads sleep stages and heart rate, trims them to the tap window and stores them. Falls back to estimating from activity | Planned (step 5) |

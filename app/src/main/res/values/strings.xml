@@ -1,4 +1,29 @@
 <resources>
     <string name="app_name">SleepTight</string>
     <string name="tagline">Track your nights. Every number explained.</string>
+
+    <!-- Home -->
+    <string name="going_to_bed">Going to bed</string>
+    <string name="im_up">I\'m up</string>
+    <string name="in_bed_since">In bed since %1$s</string>
+    <string name="in_bed_for">%1$s so far</string>
+    <string name="first_night_hint">Tap Going to bed when you turn in, and I\'m up when you get up. Those two taps define your night.</string>
+    <string name="last_night">Last night</string>
+    <string name="time_range">%1$s – %2$s</string>
+    <string name="time_in_bed">%1$s in bed</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="duration_minutes">%1$d min</string>
+
+    <!-- Open night prompt -->
+    <string name="overdue_title">Still in bed?</string>
+    <string name="overdue_body">This night started on %1$s, %2$s ago. Did you forget to tap I\'m up?</string>
+    <string name="overdue_set_wake_time">Set wake time</string>
+    <string name="overdue_keep_open">Keep it open</string>
+    <string name="wake_picker_title">When did you get up?</string>
+    <string name="close_night">Close night</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Errors -->
+    <string name="error_wake_time_in_future">That time hasn\'t happened yet. Pick an earlier wake time.</string>
+    <string name="error_wake_before_bed">Your phone\'s clock is earlier than your bed tap, so the night can\'t be closed. Check the date and time settings.</string>
 </resources>

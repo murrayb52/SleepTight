@@ -164,3 +164,7 @@ Show these next to each metric. Keep them in one constants file:
 - Some Android brands kill foreground services despite exemptions. Test a full night early (after step 3).
 - Health Connect data can arrive hours late, so the score must be able to recompute.
 - Exact alarm and microphone foreground service permissions differ by Android version. Handle the denial paths clearly.
+
+## Notes on departures
+
+- **2026-11-04 (step 1):** `Night` also stores `zoneId`, the device zone at the bed tap, so local-time rules stay right for past nights after travelling. A bed tap before 12:00 belongs to the previous date's night. The 16-hour prompt offers "Set wake time" (a clock picker) and "Keep it open" rather than closing at the current time, which would record a forgotten night as 20+ hours in bed.

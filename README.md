@@ -106,7 +106,7 @@ Each permission has a clear denial path. The app keeps working with reduced feat
 Taken from [`docs/plan/2026-11-04-v1-build-plan.md`](docs/plan/2026-11-04-v1-build-plan.md):
 
 - [x] 0. Repo setup: Gradle, Compose, Room, README, `CLAUDE.md`, CI
-- [ ] 1. Data model + bed/wake taps + Home screen
+- [x] 1. Data model + bed/wake taps + Home screen
 - [ ] 2. Metrics module + score + regularity + unit tests
 - [ ] 3. NightService: mic dB logging, baseline, noise events, Tonight screen
 - [ ] 4. Alarm: scheduling, smart trigger, ramp, snooze counting, `AlarmEvents` hooks, sounds
