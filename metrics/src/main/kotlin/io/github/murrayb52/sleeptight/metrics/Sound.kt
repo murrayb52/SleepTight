@@ -17,6 +17,10 @@ data class SoundConfig(
     val noiseMergeGap: Duration = Duration.ofSeconds(30),
     /** A second this many dB above baseline (strictly) counts towards activity. */
     val activityThresholdDb: Double = 8.0,
+    /** Sleep estimate: a minute with at least this many active seconds is awake... */
+    val estimateAwakeActiveSeconds: Int = 3,
+    /** ...and only a run of at least this many quiet minutes counts as asleep. */
+    val estimateMinQuietMinutes: Int = 20,
 )
 
 object SoundLevel {

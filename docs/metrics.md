@@ -10,6 +10,17 @@ A `NightInput` holds the bed and wake taps, the sleep segments (each with a stag
 
 Stages are `AWAKE`, `LIGHT`, `DEEP`, `REM` and `UNKNOWN`. **`UNKNOWN` counts as asleep, stage not known.** The activity-based estimate produces `AWAKE` and `UNKNOWN` only.
 
+## Sleep estimate without Garmin (`SleepEstimator`)
+
+When a night has no Garmin stages, asleep and awake are estimated from the sound monitor's activity per minute (seconds more than 8 dB above the room's baseline; see [sound-monitoring.md](sound-monitoring.md#activity)):
+
+- A minute with **3 or more active seconds** is **awake** (`SoundConfig.estimateAwakeActiveSeconds`).
+- A run of **20 or more consecutive quiet minutes** is **asleep** (`estimateMinQuietMinutes`), the whole run included. Quiet runs shorter than that count as awake: you haven't settled yet.
+- **Missing minutes leave a gap** (for example while the service wasn't running). Gaps count as neither asleep nor awake, so they lower efficiency rather than inventing sleep.
+- Asleep segments are `UNKNOWN` (asleep, stage not known): there's **no deep or REM estimate**, so the score spreads that part's points over the others. Segments are merged where they touch and trimmed to the taps.
+
+The thresholds are starting points, to be tuned against Garmin nights once there are some to compare.
+
 ## Night metrics (`NightMetrics.of`)
 
 Before anything is measured, segments are **trimmed to [bed tap, wake tap]**. Where segments overlap, a later one loses the overlapping part, so no minute is counted twice. Gaps between segments count as neither asleep nor awake.

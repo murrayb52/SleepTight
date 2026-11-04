@@ -46,5 +46,6 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 - **Connect IQ watch app** for a wrist-driven smart alarm
 - **Sound classification**: snoring, talking, coughing
 - **Falling-asleep sounds and stories**
+- **Release signing and developer verification.** Play Protect blocks the debug-signed APK as "harmful" (2026-11-04), most likely because of background microphone use, a boot receiver and the battery-exemption request from an unknown developer. For now the user taps "Install anyway", and permissions stay as they are (user's decision). Revisit a release key when Google's developer verification for sideloaded apps reaches South Africa, or once JSON export (step 9) gives a safe backup: switching keys needs one uninstall, which would wipe the nights otherwise. Installs over `adb` are reportedly exempt from verification.
 - **Thinner storage for old nights**: per-minute summaries instead of per-second levels after a while (about 1.3 MB per night today)
 - **Smart-trigger tuning** once there are real nights to compare against Garmin stages
