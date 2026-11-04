@@ -2,6 +2,8 @@
 
 How the app works, written as each feature is built. These pages describe what the code actually does. Where that differs from the original plan, the pages here are correct.
 
+Start with [`architecture.md`](architecture.md) for the overall structure.
+
 ## How it works
 
 Pages are added as each build step lands:

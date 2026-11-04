@@ -1,0 +1,118 @@
+# Architecture
+
+How SleepTight is put together: the modules, the main components, how data moves through a night, and why things are shaped this way. For what each feature does in detail, see the other pages in [`docs/`](README.md). For the original intent, see the [v1 plan](plan/2026-11-04-v1-build-plan.md).
+
+> **Status:** the structure below is the v1 target. The **Status** column in each table says what exists in code today, and is updated as each build step lands.
+
+## At a glance
+
+```mermaid
+flowchart LR
+    subgraph app[":app (Android)"]
+        UI["UI<br/>Compose screens + ViewModels"]
+        Repo["Repository"]
+        DB[("Room")]
+        Svc["NightService<br/>(foreground, mic)"]
+        Alarm["Alarm<br/>AlarmManager → Receiver → Activity"]
+        HC["HealthConnectImporter<br/>(GarminSource)"]
+        Export["JSON export"]
+    end
+    subgraph metrics[":metrics (pure Kotlin)"]
+        M["Night metrics · score<br/>regularity · caffeine · sleep debt"]
+    end
+    HCApp[["Health Connect<br/>(written by Garmin Connect)"]]
+
+    UI <--> Repo
+    Repo <--> DB
+    Svc --> Repo
+    Alarm --> Repo
+    HCApp --> HC --> Repo
+    Repo -- "plain data in,<br/>results out" --> M
+    Repo --> Export
+```
+
+## Modules
+
+| Module | What it is | Depends on | Status |
+|---|---|---|---|
+| `:app` | The Android app: UI, storage, services, alarm, Health Connect, export | `:metrics`, AndroidX | Scaffold only |
+| `:metrics` | Pure Kotlin/JVM maths: night metrics, sleep score, regularity, caffeine at bedtime, sleep debt | Kotlin stdlib only | Empty |
+
+`:metrics` is kept separate so the build itself enforces "no Android here". That makes every number the app shows testable with fast JVM unit tests on synthetic nights, without an emulator. `:app` converts Room entities into `:metrics` input types and stores the results.
+
+## Components in `:app`
+
+| Package | Component | Responsibility | Status |
+|---|---|---|---|
+| `data` | Room entities, DAOs, `NightRepository` | The single place that reads and writes data. Exposes `Flow`s to the UI and recomputes scores | Planned (step 1) |
+| `ui` | Screens + ViewModels | Home, Tonight, Morning report, Trends, Caffeine, Settings. Screens are stateless, and ViewModels hold state | Placeholder |
+| `tracking` | `NightService` | Foreground service (`microphone` type). Reads `AudioRecord`, computes dB per second, keeps a rolling baseline, detects noise events, and batches writes. Never stores audio | Planned (step 3) |
+| `alarm` | `AlarmScheduler`, `AlarmReceiver`, `AlarmActivity`, `AlarmEvents` | Schedules the window with `setAlarmClock`, runs the smart trigger, rings with a volume ramp and counts snoozes | Planned (step 4) |
+| `health` | `HealthConnectImporter` behind `GarminSource` | Reads sleep stages and heart rate, trims them to the tap window and stores them. Falls back to estimating from activity | Planned (step 5) |
+| `caffeine` | Drink log + defaults | Quick-add, edit and delete, resolving mg at log time | Planned (step 7) |
+| `export` | JSON exporter | Writes everything through the Storage Access Framework, with a schema version | Planned (step 9) |
+
+Wiring is manual: a small `AppContainer`, created in the `Application` class, holds the database, the repository and the schedulers. There's no Hilt or Dagger, because the app is small enough that a DI framework would cost more build time and complexity than it saves.
+
+## A night, end to end
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant UI as Home screen
+    participant R as Repository
+    participant S as NightService
+    participant A as Alarm
+    participant H as HealthConnectImporter
+    participant M as :metrics
+
+    U->>UI: Going to bed
+    UI->>R: open Night (bedTapAt)
+    R->>S: start (foreground)
+    R->>A: schedule wake window
+    loop every second
+        S->>R: dB sample (batched), noise events
+    end
+    A->>A: window opens → AlarmEvents.onWakeWindowOpened
+    A->>R: smart trigger reads recent activity
+    A->>U: ring (ramp 10→100% over 60 s)
+    U->>A: snooze (counted) / dismiss
+    U->>UI: I'm up
+    UI->>R: close Night (wakeTapAt)
+    R->>S: stop
+    R->>H: import Garmin data
+    H->>R: stages + HR, trimmed to [bed, wake]
+    R->>M: compute metrics + score
+    M-->>R: breakdown
+    R-->>UI: Morning report
+```
+
+## Key design decisions
+
+- **Taps define the night.** `bedTapAt` and `wakeTapAt` are the night's boundaries. Imported data is always trimmed to them, so Garmin's idea of when you slept never overrides yours.
+- **Scores are derived, not stored facts.** Garmin data can arrive hours late, after the watch syncs. The repository can recompute any night from stored data at any time. `Night.scoreJson` is a cache, refreshed whenever new data arrives (on "I'm up", on app open and on manual refresh).
+- **No raw audio, ever.** `NightService` processes audio buffers in memory and keeps only levels. That's a privacy rule, and it also keeps storage small.
+- **Relative sound levels.** Phone mics aren't calibrated, so everything is relative to a rolling 20-minute median baseline rather than absolute dB.
+- **Extension points are interfaces now.** `AlarmEvents` (no-op in v1, Philips Hue sunrise later) and `GarminSource` (Health Connect in v1, the unofficial Garmin API later) let future features plug in without restructuring.
+- **All tuning in one place.** Score weights and thresholds live in `ScoreConfig`, and reference ranges live in a single constants file.
+
+## Time
+
+Instants are stored as epoch milliseconds (UTC). Local-time rules, such as the 22:00 bedtime goal, the alarm window and which date a night belongs to, use `java.time` with an injected `Clock` and `ZoneId`, so tests can pin them. A night belongs to the evening it started, so a 00:30 bed tap counts towards the previous date.
+
+## Threading
+
+Kotlin coroutines throughout. Room DAOs expose `Flow`s that the ViewModels collect. `NightService` reads audio on a dedicated coroutine and writes samples to Room in batches (for example every 30 s) rather than once per second, to save battery and I/O. Metric computation is pure and cheap, and runs on `Dispatchers.Default`.
+
+## Testing
+
+| Level | What | Where it runs |
+|---|---|---|
+| Unit (`:metrics`) | Every formula, against synthetic nights | JVM, CI on every push |
+| Unit (`:app`) | Repository logic, trimming, fallback estimation, with fakes | JVM, CI on every push |
+| Instrumented | Room DAOs, Compose UI flows, service and alarm behaviour | Emulator on the dev laptop (`connectedAndroidTest`) |
+| Real world | A full night: service survival, alarm, Health Connect sync | The physical phone |
+
+## Builds and signing
+
+CI builds a debug APK on every push. Local and CI builds both sign with the **same debug key**: it's kept locally at `~/.android/debug.keystore` and in CI as the `DEBUG_KEYSTORE_BASE64` secret, and CI checks the signer fingerprint. That means any build installs over the previous one, and the app's data survives the update.

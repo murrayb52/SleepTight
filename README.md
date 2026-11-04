@@ -23,6 +23,10 @@ Yet another sleep app, built to track and improve sleep quality. It's a personal
 3. **Privacy first.** Everything stays on the device, with no account and no cloud. Sound levels only, never audio.
 4. **Goals, not rules.** The app records snoozes and late nights and never blocks them.
 
+## How it's built
+
+SleepTight is a Jetpack Compose app backed by a local Room database. Two background pieces do the overnight work: a foreground service that listens for sound levels, and an exact alarm. A Health Connect importer adds Garmin detail after you wake. All the maths behind the score lives in a separate pure-Kotlin module, so every number is unit tested. The full picture, with diagrams of a night end to end, is in [`docs/architecture.md`](docs/architecture.md). How each feature behaves is documented in [`docs/`](docs/README.md).
+
 ## Tech stack
 
 | Area | Choice |
@@ -69,10 +73,21 @@ You don't need a separate Gradle install. Use the wrapper:
 ./gradlew test                 # all unit tests
 ./gradlew :metrics:test        # just the metrics module (fast, no Android needed)
 ./gradlew assembleDebug        # build the debug APK → app/build/outputs/apk/debug/
-./gradlew installDebug         # install on a connected phone (USB debugging on)
+./gradlew installDebug         # install on a connected phone or emulator
+./gradlew connectedAndroidTest # instrumented tests on a connected device or emulator
 ```
 
-CI (GitHub Actions) runs the unit tests and builds the debug APK on every push to `main` and on every pull request. The APK is attached to each run as the `sleeptight-debug-apk` artifact (kept for 30 days), so you can install a build without a local Android SDK: `gh run download -n sleeptight-debug-apk`.
+### Installing a CI build
+
+CI (GitHub Actions) runs the unit tests and builds the debug APK on every push to `main` and on every pull request. Each run keeps the APK as the `sleeptight-debug-apk` artifact for 30 days, so you can install a build without a local Android SDK:
+
+```bash
+gh run download -n sleeptight-debug-apk && adb install -r app-debug.apk
+```
+
+Or download it from the run page on GitHub and open it on the phone.
+
+Local and CI builds are all signed with the same debug key, kept in the `DEBUG_KEYSTORE_BASE64` repository secret, so each new build installs **over** the previous one and your recorded nights are kept. To build locally with that key, put it at `~/.android/debug.keystore`.
 
 ## Permissions (as features land)
 

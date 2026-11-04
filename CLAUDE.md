@@ -10,6 +10,18 @@ A personal Android sleep tracker. The spec is `docs/plan/2026-11-04-v1-build-pla
 ./gradlew assembleDebug    # must also pass before committing changes to :app
 ```
 
+## Where things are explained
+
+- `docs/architecture.md`: modules, components, a night end to end, key design decisions. **Read it before structural changes and update it in the same commit when the structure changes** (including the per-component Status column).
+- `docs/README.md`: index of how-it-works pages per feature.
+- `README.md`: product-level overview for first-time visitors. Keep architecture there to a brief nod that links to `docs/architecture.md`.
+
+## Testing on devices
+
+- Verify behaviour on the **emulator** before asking the user to test anything on their phone. Use `./gradlew installDebug` / `connectedAndroidTest`, plus `adb` for screenshots (`adb exec-out screencap -p`), logs (`adb logcat`) and UI checks.
+- The physical phone is for what an emulator can't show: overnight service survival, the real mic, the alarm, and Health Connect sync from Garmin.
+- All builds sign with the shared debug key (see the README), so `adb install -r` upgrades in place. Never uninstall the app on the user's phone, because that wipes their recorded nights.
+
 ## Workflow
 
 - Work through the plan's **build order**, with one or more commits per step. Tick the step off in the README's build order list when it's done.
