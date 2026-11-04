@@ -78,6 +78,7 @@ class HomeViewModel(
             tracking = tracking,
             noiseEvents = noise.map { it.toUi() }.sortedByDescending { it.start },
             alarm = alarmUi(settings, open, alarmState),
+            goals = goalsUi(settings),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -104,8 +105,32 @@ class HomeViewModel(
         alarm.snooze()
     }
 
-    fun onDismissAlarm() {
-        alarm.dismiss()
+    fun onStopAlarm() {
+        alarm.stop()
+    }
+
+    /** The wake-by wheel settled on a new time: the window keeps its length and ends there. */
+    fun onWakeByChanged(time: LocalTime) {
+        viewModelScope.launch {
+            val s = repository.getSettings()
+            val end = time.hour * 60 + time.minute
+            if (end == s.alarmWindowEndMinutes) return@launch
+            val length = Math.floorMod(s.alarmWindowEndMinutes - s.alarmWindowStartMinutes, 24 * 60)
+            repository.updateSettings(s.copy(alarmWindowEndMinutes = end, alarmWindowStartMinutes = Math.floorMod(end - length, 24 * 60)))
+        }
+    }
+
+    fun onWindowLengthChanged(minutes: Int) {
+        viewModelScope.launch {
+            val s = repository.getSettings()
+            repository.updateSettings(s.copy(alarmWindowStartMinutes = Math.floorMod(s.alarmWindowEndMinutes - minutes, 24 * 60)))
+        }
+    }
+
+    fun onBedsideCheckDontShow() {
+        viewModelScope.launch {
+            repository.updateSettings(repository.getSettings().copy(bedsideCheckEnabled = false))
+        }
     }
 
     fun onImUp() {

@@ -8,6 +8,12 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 
 | Feature | How it works |
 |---|---|
+| **Redesign**: night-sky look, bottom nav (Sleep · History · Profile, hidden in bed), twinkling stars, arc score dials | [ui.md](ui.md) |
+| **Editable alarm**: wake-by wheel and window length on the Sleep tab, on/off chip | [ui.md](ui.md#sleep-tab-before-bed) |
+| **Bedside check** at the bed tap (charger, nightstand, mic towards you), with Don't show again | [ui.md](ui.md#bedside-check) |
+| **Alarm screen**: a very slow sunrise while ringing, swipe up to snooze, Stop ends the night and sweeps to day with a morning summary | [ui.md](ui.md#alarm-screen) |
+| **History** (7/30 days, averages, week strip, night list), **one night's page**, **Profile** with goals, alarm and reminder settings | [ui.md](ui.md) |
+| **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
 | **Bed and wake taps** define each night. A double tap can't open two nights, and a night left open 16 h prompts for the real wake time | [nights.md](nights.md) |
 | **Overnight sound monitoring**: relative sound levels once a second, noise events, activity per minute. Levels only, never audio | [sound-monitoring.md](sound-monitoring.md) |
 | **Smart alarm** in a wake window (default 05:45–06:15). It rings early when you stir, otherwise at the end of the window. A generated chime rises from 10 % to 100 % over 60 s, with no vibration, over the lock screen. On/off switch on Home | [alarm.md](alarm.md) |
@@ -27,11 +33,8 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 
 ## Agreed, not built yet
 
-- **Redesign with a bottom nav bar (Sleep · History · Profile).** Requested 2026-11-04, inspired by the mood of the user's previous sleep app but with SleepTight's own look: a deep night sky with stars, a moon, big thin clock numerals, and warm amber for the main action. Mockups are in the [redesign canvas](https://claude.ai/artifact/6XdQ4FWBxVReKzJEH77tet), awaiting approval. Screens: Sleep (wake-by wheel, window chip, alarm on/off, Going to bed, last night), Tonight (dimmed, no nav, press-and-hold I'm up), Alarm, History (7/30 days, week strip, list of nights), One night (the step 6 morning report), Profile (stats, goals, alarm, reminders, data).
-- **Editable alarm time**: a wake-by wheel picker and window length on the Sleep screen. Comes with the redesign.
-- **Bedside check before each night**: a sheet at the bed tap reminding you to plug in the charger, put the phone on the nightstand next to you, and point the mic (bottom edge) towards you. Includes a "Don't show again" option. Comes with the redesign.
-- **Settings in Profile**: goals (bedtime, sleep, snoozes), alarm window, sound, base snooze length, reminder and bedside-check toggles, Health Connect, export.
-- **Bundled alarm sounds**: 3–5 CC0 sounds from Freesound (the user is getting an account), listed with sources and licences in `ASSETS.md`, plus a sound picker. The generated chime stays as the fallback.
+- **Bundled alarm sounds**: 3–5 CC0 sounds from Freesound (account `sound_the_alarm` created 2026-11-04; downloading needs an API key), listed with sources and licences in `ASSETS.md`, plus a sound picker in Profile. The generated chime stays as the fallback.
+- **Sleep stages and score on the night page and dials** once step 5 provides sleep data (Garmin or the activity estimate).
 - **Opt-in loud-moment playback**: the loudest 5 short clips per night, kept for 7 nights, with a hard size cap. It's the one planned exception to "never store audio". Spec in the [v1 plan's "Later" list](plan/2026-11-04-v1-build-plan.md#later-not-v1-but-design-for-it).
 
 ## Future ideas
@@ -41,6 +44,5 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 - **Connect IQ watch app** for a wrist-driven smart alarm
 - **Sound classification**: snoring, talking, coughing
 - **Falling-asleep sounds and stories**
-- **Press-and-hold "I'm up"**, so a bump in the night can't end it (shown in the mockups)
 - **Thinner storage for old nights**: per-minute summaries instead of per-second levels after a while (about 1.3 MB per night today)
 - **Smart-trigger tuning** once there are real nights to compare against Garmin stages

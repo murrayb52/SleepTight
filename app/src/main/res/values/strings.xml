@@ -1,18 +1,23 @@
 <resources>
     <string name="app_name">SleepTight</string>
-    <string name="tagline">Track your nights. Every number explained.</string>
 
     <!-- Home -->
     <string name="going_to_bed">Going to bed</string>
     <string name="im_up">I\'m up</string>
-    <string name="in_bed_since">In bed since %1$s</string>
-    <string name="in_bed_for">%1$s so far</string>
     <string name="first_night_hint">Tap Going to bed when you turn in, and I\'m up when you get up. Those two taps define your night.</string>
     <string name="last_night">Last night</string>
-    <string name="time_range">%1$s – %2$s</string>
     <string name="time_in_bed">%1$s in bed</string>
     <string name="duration_hours_minutes">%1$d h %2$d min</string>
     <string name="duration_minutes">%1$d min</string>
+    <string name="duration_hours">%1$d h</string>
+    <plurals name="noise_count">
+        <item quantity="one">%d noise</item>
+        <item quantity="other">%d noises</item>
+    </plurals>
+    <plurals name="snooze_count">
+        <item quantity="one">%d snooze</item>
+        <item quantity="other">%d snoozes</item>
+    </plurals>
 
     <!-- Open night prompt -->
     <string name="overdue_title">Still in bed?</string>
@@ -24,10 +29,7 @@
     <string name="cancel">Cancel</string>
 
     <!-- Tonight: sound monitoring -->
-    <string name="sound_listening">Listening for noise</string>
     <string name="sound_level_now">%1$+d dB vs your room</string>
-    <string name="sound_no_audio_stored">Sound levels only. No audio is recorded or stored.</string>
-    <string name="sound_starting">Starting sound monitoring…</string>
     <string name="sound_mic_silent">The microphone is hearing complete silence. Check that microphone access isn\'t switched off in quick settings, and that no other app is using the mic.</string>
     <string name="sound_off_title">Sound monitoring is off</string>
     <string name="sound_off_mic_permission">SleepTight needs the microphone to measure how loud your room is. It only keeps sound levels, never audio. Your taps still record the night either way.</string>
@@ -61,17 +63,11 @@
     <string name="notification_stopped_text">SleepTight stopped measuring sound levels. Open the app to resume.</string>
 
     <!-- Alarm -->
-    <string name="alarm_title">Alarm</string>
-    <string name="alarm_window">%1$s – %2$s</string>
-    <string name="alarm_explainer">Wakes you in this window when you seem to be stirring, or at %1$s at the latest.</string>
-    <string name="alarm_off_tonight">No alarm. Turn it on before you tap Going to bed.</string>
-    <string name="alarm_tonight">Tonight\'s alarm: %1$s – %2$s</string>
+    <string name="alarm_explainer">Wakes you gently between %1$s and %2$s, as soon as you start to stir</string>
+    <string name="alarm_tonight">Alarm %1$s – %2$s</string>
     <string name="alarm_none_tonight">No alarm tonight.</string>
     <string name="alarm_rang_at">Alarm rang at %1$s</string>
     <string name="alarm_good_morning">Good morning</string>
-    <string name="alarm_dismiss">Dismiss</string>
-    <string name="alarm_snooze">Snooze %1$d min</string>
-    <string name="alarm_snoozes_used">%1$d of %2$d snoozes used. Each one is shorter.</string>
     <string name="alarm_no_snoozes_left">No snoozes left. Time to get up.</string>
     <string name="alarm_notification_title">Alarm</string>
     <string name="alarm_snoozed_title">Alarm snoozed until %1$s</string>
@@ -90,4 +86,94 @@
     <!-- Errors -->
     <string name="error_wake_time_in_future">That time hasn\'t happened yet. Pick an earlier wake time.</string>
     <string name="error_wake_before_bed">Your phone\'s clock is earlier than your bed tap, so the night can\'t be closed. Check the date and time settings.</string>
+
+    <!-- Navigation -->
+    <string name="tab_sleep">Sleep</string>
+    <string name="tab_history">History</string>
+    <string name="tab_profile">Profile</string>
+
+    <!-- Sleep (before bed) -->
+    <string name="greeting_morning">Good morning</string>
+    <string name="greeting_afternoon">Good afternoon</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="greeting_night">Good night</string>
+    <string name="bedtime_goal">Bedtime goal %1$s</string>
+    <string name="reminder_at">Reminder %1$s</string>
+    <string name="reminder_off">Reminder off</string>
+    <string name="wake_me_by">Wake me by</string>
+    <string name="alarm_off_title">No alarm</string>
+    <string name="window_chip">%1$d-min window</string>
+    <string name="alarm_on_chip">Alarm on</string>
+    <string name="alarm_off_chip">Alarm off</string>
+    <string name="window_title">Wake window</string>
+    <string name="window_option">%1$d min</string>
+    <string name="last_night_summary">%1$s – %2$s · %3$s in bed</string>
+
+    <!-- Bedside check -->
+    <string name="bedside_title">Before you sleep</string>
+    <string name="bedside_charger_title">Plugged in</string>
+    <string name="bedside_charger_body">Listening runs all night, so keep the charger connected.</string>
+    <string name="bedside_nightstand_title">On the nightstand, next to you</string>
+    <string name="bedside_nightstand_body">Within arm\'s reach, not under the pillow.</string>
+    <string name="bedside_mic_title">Mic pointing towards you</string>
+    <string name="bedside_mic_body">The mic is in the bottom edge: turn that end towards your pillow.</string>
+    <string name="bedside_dont_show">Don\'t show this again</string>
+    <string name="bedside_start">Start the night</string>
+
+    <!-- Tonight -->
+    <string name="listening_pill">Listening · sound levels only</string>
+    <string name="not_listening_pill">Not listening</string>
+    <string name="in_bed_since_for">In bed since %1$s · %2$s</string>
+    <string name="noise_latest">latest %1$s · peak %2$+d dB</string>
+    <string name="hold_hint">Press and hold, so a bump in the night can\'t end it</string>
+
+    <!-- Alarm screen -->
+    <string name="alarm_stop">Stop alarm</string>
+    <string name="alarm_snooze_action">Snooze</string>
+    <string name="swipe_to_snooze">Swipe up to snooze</string>
+    <string name="morning_last_night">Here\'s last night</string>
+    <string name="tile_in_bed">in bed</string>
+    <string name="tile_noise">noise events</string>
+    <string name="tile_snoozes">snoozes</string>
+    <string name="see_the_night">See the night</string>
+    <string name="done">Done</string>
+    <string name="score_pending">The sleep score arrives once there\'s sleep data (Garmin import or the activity estimate).</string>
+
+    <!-- History -->
+    <string name="range_7">7 days</string>
+    <string name="range_30">30 days</string>
+    <string name="avg_score">avg score</string>
+    <string name="avg_in_bed">avg in bed</string>
+    <string name="avg_bedtime">avg bedtime</string>
+    <string name="history_empty">No nights in this range yet. Tap Going to bed tonight.</string>
+    <string name="night_row_detail">%1$s → %2$s · %3$s · %4$s</string>
+    <string name="night_title">%1$s – %2$s</string>
+    <string name="night_times">%1$s → %2$s</string>
+    <string name="night_alarm">Alarm %1$s · %2$s</string>
+    <string name="sleep_stages">Sleep stages</string>
+    <string name="sleep_stages_pending">Stages appear here once Garmin data is imported, or as an estimate from the night\'s activity.</string>
+    <string name="noise_events_quiet">A quiet night.</string>
+
+    <!-- Profile -->
+    <string name="stat_nights">nights</string>
+    <string name="stat_by_goal">in bed by %1$s</string>
+    <string name="stat_snoozes">snoozes a night</string>
+    <string name="section_goals">Goals</string>
+    <string name="section_alarm">Alarm</string>
+    <string name="section_reminders">Reminders</string>
+    <string name="section_data">Data</string>
+    <string name="goal_bedtime">Bedtime</string>
+    <string name="goal_sleep">Sleep</string>
+    <string name="goal_snoozes">Snoozes</string>
+    <string name="at_most">at most %1$d</string>
+    <string name="alarm_window_row">Wake window</string>
+    <string name="alarm_sound_row">Sound</string>
+    <string name="sound_chime">Chime</string>
+    <string name="reminder_row">30 min before bedtime</string>
+    <string name="bedside_row">Bedside check</string>
+    <string name="data_garmin">Garmin via Health Connect</string>
+    <string name="data_export">Export to a file</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="version">SleepTight %1$s</string>
+    <string name="save">Save</string>
 </resources>

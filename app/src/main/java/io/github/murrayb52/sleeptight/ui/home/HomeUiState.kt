@@ -25,12 +25,26 @@ data class HomeUiState(
     /** Noise events so far in the open night, most recent first. */
     val noiseEvents: List<NoiseEventUi> = emptyList(),
     val alarm: AlarmUi = AlarmUi(),
+    val goals: GoalsUi = GoalsUi(),
+)
+
+data class GoalsUi(
+    val bedtime: LocalTime = LocalTime.of(22, 0),
+    val reminderEnabled: Boolean = true,
+    val bedsideCheckEnabled: Boolean = true,
+)
+
+fun goalsUi(settings: Settings) = GoalsUi(
+    bedtime = LocalTime.MIDNIGHT.plusMinutes(settings.targetBedtimeMinutes.toLong()),
+    reminderEnabled = settings.bedtimeReminderEnabled,
+    bedsideCheckEnabled = settings.bedsideCheckEnabled,
 )
 
 data class AlarmUi(
     val enabled: Boolean = true,
     val windowStart: LocalTime = LocalTime.of(5, 45),
     val windowEnd: LocalTime = LocalTime.of(6, 15),
+    val windowMinutes: Int = 30,
     /** The open night's armed window, or null if no alarm is set for it. */
     val tonightStart: Instant? = null,
     val tonightEnd: Instant? = null,
@@ -42,6 +56,7 @@ fun alarmUi(settings: Settings, openNight: Night?, state: AlarmState) = AlarmUi(
     enabled = settings.alarmEnabled,
     windowStart = LocalTime.MIDNIGHT.plusMinutes(settings.alarmWindowStartMinutes.toLong()),
     windowEnd = LocalTime.MIDNIGHT.plusMinutes(settings.alarmWindowEndMinutes.toLong()),
+    windowMinutes = Math.floorMod(settings.alarmWindowEndMinutes - settings.alarmWindowStartMinutes, 24 * 60),
     tonightStart = openNight?.alarmWindowStart?.let(Instant::ofEpochMilli),
     tonightEnd = openNight?.alarmWindowEnd?.let(Instant::ofEpochMilli),
     firedAt = openNight?.alarmFiredAt?.let(Instant::ofEpochMilli),
@@ -69,7 +84,15 @@ data class DeviceState(
 
 data class OpenNightUi(val nightId: Long, val bedTapAt: Instant, val inBedFor: Duration)
 
-data class LastNightUi(val bedTapAt: Instant, val wakeTapAt: Instant, val timeInBed: Duration)
+data class LastNightUi(
+    val bedTapAt: Instant,
+    val wakeTapAt: Instant,
+    val timeInBed: Duration,
+    val nightId: Long = 0,
+    val snoozes: Int = 0,
+    /** Null until there's sleep data to score (Garmin import or the activity estimate). */
+    val score: Int? = null,
+)
 
 /** Shown when the open night has been open for at least [OPEN_NIGHT_PROMPT_AFTER]. */
 data class OverduePrompt(
@@ -95,7 +118,7 @@ fun buildHomeUiState(
     val last = lastNight?.wakeTapAt?.let { wake ->
         val bed = Instant.ofEpochMilli(lastNight.bedTapAt)
         val up = Instant.ofEpochMilli(wake)
-        LastNightUi(bed, up, Duration.between(bed, up))
+        LastNightUi(bed, up, Duration.between(bed, up), lastNight.id, lastNight.snoozeCount)
     }
     val prompt = open
         ?.takeIf { it.inBedFor >= OPEN_NIGHT_PROMPT_AFTER && it.nightId != promptDismissedForNightId }

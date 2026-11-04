@@ -76,4 +76,23 @@ class MigrationTest {
             }
         }
     }
+
+    @Test
+    fun version3To4TurnsTheBedsideCheckOn() {
+        helper.createDatabase(dbName, 3).use { db ->
+            db.execSQL(
+                "INSERT INTO settings (id, targetBedtimeMinutes, targetSleepMinutes, maxSnoozes, alarmEnabled, " +
+                    "bedtimeReminderEnabled, alarmWindowStartMinutes, alarmWindowEndMinutes, snoozeMinutes, alarmSound, " +
+                    "espressoHomeMg, espressoRestaurantMg, decafShotMg, colaMgPer100Ml, caffeineHalfLifeHours) " +
+                    "VALUES (0, 1320, 480, 1, 1, 0, 345, 375, 9, NULL, 63, 75, 3, 10, 5)",
+            )
+        }
+        helper.runMigrationsAndValidate(dbName, 4, true).use { db ->
+            db.query("SELECT bedtimeReminderEnabled, bedsideCheckEnabled FROM settings").use { c ->
+                c.moveToFirst()
+                assertEquals(0, c.getInt(0))
+                assertEquals(1, c.getInt(1))
+            }
+        }
+    }
 }

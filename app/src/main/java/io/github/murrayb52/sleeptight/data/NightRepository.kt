@@ -31,6 +31,16 @@ class NightRepository(
 
     fun noiseEvents(nightId: Long): Flow<List<NoiseEvent>> = db.noiseEventDao().observeForNight(nightId)
 
+    /** Closed nights, newest first. */
+    val closedNights: Flow<List<Night>> = nights.observeClosed()
+
+    /** Noise events per night, by night id. */
+    val noiseCounts: Flow<Map<Long, Int>> = db.noiseEventDao().observeCounts().map { rows -> rows.associate { it.nightId to it.count } }
+
+    fun night(id: Long): Flow<Night?> = nights.observe(id)
+
+    suspend fun noiseEventsOnce(nightId: Long): List<NoiseEvent> = db.noiseEventDao().getForNight(nightId)
+
     suspend fun getSettings(): Settings = settingsDao.get() ?: Settings()
 
     suspend fun updateSettings(settings: Settings) = settingsDao.upsert(settings.copy(id = Settings.SINGLETON_ID))

@@ -23,6 +23,8 @@ data class AlarmConfig(
     val rampStartVolume: Float = 0.10f,
     /** ...and reaches full volume after this long. */
     val rampDuration: Duration = Duration.ofSeconds(60),
+    /** The first snooze. Fixed, not a setting: the ladder is baked in. */
+    val baseSnoozeMinutes: Int = 9,
     /** After this many snoozes the alarm can only be stopped. */
     val maxSnoozes: Int = 5,
     /** Each snooze is this much shorter than the one before... */
@@ -90,7 +92,7 @@ object VolumeRamp {
  */
 object SnoozeLadder {
     /** Length of the next snooze, or null if no snoozes are left. */
-    fun minutesFor(snoozesSoFar: Int, baseMinutes: Int, config: AlarmConfig = AlarmConfig()): Int? {
+    fun minutesFor(snoozesSoFar: Int, baseMinutes: Int = AlarmConfig().baseSnoozeMinutes, config: AlarmConfig = AlarmConfig()): Int? {
         if (snoozesSoFar >= config.maxSnoozes) return null
         return (baseMinutes - config.snoozeStepMinutes * snoozesSoFar).coerceAtLeast(config.minSnoozeMinutes)
     }

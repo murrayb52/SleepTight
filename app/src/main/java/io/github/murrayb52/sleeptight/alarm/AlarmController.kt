@@ -66,7 +66,8 @@ class AlarmController(
 
     fun snooze() = context.startService(AlarmRingService.intent(context, AlarmRingService.ACTION_SNOOZE))
 
-    fun dismiss() = context.startService(AlarmRingService.intent(context, AlarmRingService.ACTION_DISMISS))
+    /** The user stopped the alarm from Home: ends the alarm and the night. */
+    fun stop() = context.startService(AlarmRingService.intent(context, AlarmRingService.ACTION_STOP))
 
     /** The smart trigger fired: ring now instead of at the end of the window. */
     fun ringNow(nightId: Long) = scheduler.scheduleRing(nightId, clock.instant().plusSeconds(1))

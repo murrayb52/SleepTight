@@ -8,8 +8,9 @@ Yet another sleep app, built to track and improve sleep quality. It's a personal
 
 - **Bed and wake taps.** Tap **Going to bed** at night and **I'm up** in the morning. Those two taps set the night's boundaries, and everything else fits inside them.
 - **Overnight sound monitoring.** A foreground service measures sound level once a second, relative to a rolling 20-minute baseline. It logs noise events and uses per-minute activity as a rough movement proxy. **No audio is ever recorded or stored, only levels.**
-- **Smart alarm.** It wakes you within a window (default 05:45–06:15) when activity suggests light sleep, or at the end of the window otherwise. Volume ramps up over 60 seconds, with no vibration. Snoozes get shorter each time (9 → 7 → 5 → 3 → 2 min) and run out after 5.
+- **Smart alarm.** It wakes you within a window (default 05:45–06:15, set with a wake-by wheel) when activity suggests light sleep, or at the end of the window otherwise. Volume ramps up over 60 seconds, with no vibration. Snoozing gets shorter each time and runs out after 5.
 - **Bedtime reminder** 30 minutes before your bedtime goal.
+- **A calm night-sky design.** Sleep, History and Profile tabs; twinkling stars at night; an alarm screen where the sun rises slowly, swipe up to snooze, and Stop brings full daylight with last night's stats.
 - **Garmin via Health Connect.** It imports sleep stages and heart rate written by Garmin Connect, trimmed to your bed and wake taps. Without Garmin data, it estimates asleep or awake from activity and labels the estimate as such.
 - **An explainable sleep score (0–100).** Duration, efficiency, deep + REM, interruptions and regularity, each shown as a bar with its points and the raw value behind it.
 - **Goal adherence.** It checks bed by 22:00, 8 hours asleep and at most 1 snooze automatically, from taps and alarm events. These goals feed the regularity metric.

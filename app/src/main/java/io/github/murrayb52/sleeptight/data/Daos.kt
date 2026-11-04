@@ -45,6 +45,9 @@ interface NightDao {
     @Query("SELECT * FROM nights ORDER BY bedTapAt DESC")
     fun observeAll(): Flow<List<Night>>
 
+    @Query("SELECT * FROM nights WHERE wakeTapAt IS NOT NULL ORDER BY bedTapAt DESC")
+    fun observeClosed(): Flow<List<Night>>
+
     @Query("UPDATE nights SET alarmWindowStart = :start, alarmWindowEnd = :end WHERE id = :id")
     suspend fun setAlarmWindow(id: Long, start: Long?, end: Long?)
 
@@ -72,8 +75,14 @@ interface SoundSampleDao {
     fun observeForNightSince(nightId: Long, since: Long): Flow<List<SoundSample>>
 }
 
+/** How many noise events a night has. */
+data class NightNoiseCount(val nightId: Long, val count: Int)
+
 @Dao
 interface NoiseEventDao {
+    @Query("SELECT nightId, COUNT(*) AS count FROM noise_events GROUP BY nightId")
+    fun observeCounts(): Flow<List<NightNoiseCount>>
+
     @Insert
     suspend fun insert(event: NoiseEvent): Long
 

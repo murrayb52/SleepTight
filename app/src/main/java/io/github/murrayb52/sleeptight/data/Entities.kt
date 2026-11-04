@@ -129,8 +129,11 @@ data class Settings(
     @ColumnInfo(defaultValue = "1") val alarmEnabled: Boolean = true,
     /** A notification 30 minutes before the bedtime goal. Added in schema version 3. */
     @ColumnInfo(defaultValue = "1") val bedtimeReminderEnabled: Boolean = true,
+    /** The bedside check (charger, nightstand, mic) at the bed tap. Added in schema version 4. */
+    @ColumnInfo(defaultValue = "1") val bedsideCheckEnabled: Boolean = true,
     val alarmWindowStartMinutes: Int = 5 * 60 + 45,
     val alarmWindowEndMinutes: Int = 6 * 60 + 15,
+    /** Unused since 2026-11-04: snooze lengths are fixed (see SnoozeLadder). Kept so old data reads. */
     val snoozeMinutes: Int = 9,
     /** Alarm sound resource name; null means the generated chime. */
     val alarmSound: String? = null,

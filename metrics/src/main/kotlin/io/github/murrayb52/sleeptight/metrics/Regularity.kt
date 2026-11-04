@@ -58,7 +58,7 @@ data class Regularity(
          * How late the bed tap was relative to the bedtime goal on that night's evening, in
          * minutes (negative = early). Measuring against each night's own date handles midnight.
          */
-        private fun minutesLate(bedTapAt: Instant, zone: ZoneId, goals: Goals): Double {
+        fun minutesLate(bedTapAt: Instant, zone: ZoneId, goals: Goals): Double {
             val nightDate = NightDate.of(bedTapAt, zone)
             // A goal like 00:15 falls on the morning after the night's date.
             val goalDate = if (goals.bedtime < NightDate.DAY_STARTS_AT) nightDate.plusDays(1) else nightDate
