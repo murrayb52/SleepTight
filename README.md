@@ -2,7 +2,7 @@
 
 Yet another sleep app, built to track and improve sleep quality. It's a personal Android sleep tracker that runs entirely on the phone and can optionally pull in Garmin data through Health Connect.
 
-> **Status:** early development. The full v1 plan is in [`docs/2026-11-04-v1-build-plan.md`](docs/2026-11-04-v1-build-plan.md), and progress is tracked against its [build order](#build-order).
+> **Status:** early development. The full v1 plan is in [`docs/plan/2026-11-04-v1-build-plan.md`](docs/plan/2026-11-04-v1-build-plan.md), and progress is tracked against its [build order](#build-order).
 
 ## What it does
 
@@ -50,7 +50,8 @@ app/                      Android application module
     ui/                   Screens: Home, Tonight, Morning report, Trends, Caffeine, Settings
   src/main/res/raw/       Bundled CC0 alarm sounds (sources and licences in ASSETS.md)
 metrics/                  Pure Kotlin/JVM: night metrics, score, regularity, caffeine, sleep debt
-docs/2026-11-04-v1-build-plan.md   The v1 build plan (spec and build order)
+docs/                     How the app works: features, metrics, data model (see docs/README.md)
+  plan/                   Dated build plans (the v1 spec and build order)
 ```
 
 `metrics` is a separate Gradle module rather than a package inside `app`. That way the build itself enforces the "no Android dependencies" rule, and its tests run on a plain JVM in seconds without an emulator or the Android SDK.
@@ -87,7 +88,7 @@ Each permission has a clear denial path. The app keeps working with reduced feat
 
 ## Build order
 
-Taken from [`docs/2026-11-04-v1-build-plan.md`](docs/2026-11-04-v1-build-plan.md):
+Taken from [`docs/plan/2026-11-04-v1-build-plan.md`](docs/plan/2026-11-04-v1-build-plan.md):
 
 - [x] 0. Repo setup: Gradle, Compose, Room, README, `CLAUDE.md`, CI
 - [ ] 1. Data model + bed/wake taps + Home screen

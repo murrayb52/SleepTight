@@ -1,6 +1,6 @@
 # SleepTight: working conventions
 
-A personal Android sleep tracker. The spec is `docs/2026-11-04-v1-build-plan.md`. Read the relevant section before building a feature. If a decision departs from it, add a dated note in the plan rather than diverging silently.
+A personal Android sleep tracker. The spec is `docs/plan/2026-11-04-v1-build-plan.md`. Read the relevant section before building a feature. If a decision departs from it, add a dated note in the plan rather than diverging silently.
 
 ## Commands
 
@@ -14,6 +14,7 @@ A personal Android sleep tracker. The spec is `docs/2026-11-04-v1-build-plan.md`
 
 - Work through the plan's **build order**, with one or more commits per step. Tick the step off in the README's build order list when it's done.
 - **Run the unit tests before each commit.** For `:metrics` changes, write the test first (synthetic nights) and then the code.
+- **Document how it works as you build it.** Each feature gets (or updates) a page in `docs/` explaining how it actually behaves: inputs, formulas, thresholds, edge cases. Link it from `docs/README.md`. The plan in `docs/plan/` is the original intent, and `docs/` is the current truth. Keep the two apart.
 - Commit messages: imperative mood, prefixed with the step, e.g. `Step 2: add efficiency component to score`.
 - Don't add a dependency without putting it in `gradle/libs.versions.toml`. Don't hard-code versions in module build files.
 
