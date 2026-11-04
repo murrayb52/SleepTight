@@ -1,0 +1,4 @@
+<resources>
+    <!-- Window theme only; Compose draws everything else via SleepTightTheme. -->
+    <style name="Theme.SleepTight" parent="android:Theme.Material.NoActionBar" />
+</resources>
