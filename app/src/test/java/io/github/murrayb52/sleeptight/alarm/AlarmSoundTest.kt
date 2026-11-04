@@ -24,4 +24,17 @@ class AlarmSoundTest {
         assertEquals(AlarmSound.entries.size, AlarmSound.entries.map { it.key }.toSet().size)
         assertEquals(listOf(AlarmSound.CHIME), AlarmSound.entries.filter { it.raw == null })
     }
+
+    @Test
+    fun `every bundled sound is credited, and only bundled sounds`() {
+        AlarmSound.entries.forEach { sound ->
+            if (sound.raw == null) {
+                assertEquals(null, sound.credit)
+            } else {
+                val credit = requireNotNull(sound.credit) { "$sound has no credit" }
+                assert(credit.author.isNotBlank() && credit.title.isNotBlank())
+                assert(credit.url.startsWith("https://freesound.org/people/${credit.author}/sounds/")) { credit.url }
+            }
+        }
+    }
 }

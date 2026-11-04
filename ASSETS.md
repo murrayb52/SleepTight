@@ -1,6 +1,8 @@
 # Bundled assets
 
-Every third-party file shipped in the app, with its source and licence.
+Every third-party file shipped in the app, with its source and licence. The same credits are shown **in the app** (Profile → About → Credits and licences): sound credits come from each `AlarmSound`'s `SoundCredit`, and a unit test fails if a bundled sound has none. Licence texts in [`licences/`](licences/) are packaged into the app as assets, so the font's OFL text ships with the font and can be read on that page.
+
+**Adding a third-party file:** add a row here, its credit in the app, and any licence text to `licences/`.
 
 | File | What | Source | Licence |
 |---|---|---|---|

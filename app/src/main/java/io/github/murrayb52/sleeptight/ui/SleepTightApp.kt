@@ -45,12 +45,14 @@ import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.ui.history.HistoryRoute
 import io.github.murrayb52.sleeptight.ui.history.NightDetailRoute
 import io.github.murrayb52.sleeptight.ui.home.HomeRoute
+import io.github.murrayb52.sleeptight.ui.profile.CreditsScreen
 import io.github.murrayb52.sleeptight.ui.profile.ProfileRoute
 import io.github.murrayb52.sleeptight.ui.theme.Palette
 
 private enum class Tab(val route: String, val label: Int) { SLEEP("sleep", R.string.tab_sleep), HISTORY("history", R.string.tab_history), PROFILE("profile", R.string.tab_profile) }
 
 private const val NIGHT_ROUTE = "night/{id}"
+private const val CREDITS_ROUTE = "credits"
 
 /** The app: three tabs with a bottom bar, plus a night's detail page. [openNightId] jumps straight to one. */
 @Composable
@@ -66,13 +68,14 @@ fun SleepTightApp(openNightId: Long? = null) {
     }
 
     // No nav bar in bed (nothing to fiddle with at night) or on a night's page.
-    val showBar = route != NIGHT_ROUTE && !(route == Tab.SLEEP.route && openNight != null)
+    val showBar = route != NIGHT_ROUTE && route != CREDITS_ROUTE && !(route == Tab.SLEEP.route && openNight != null)
     Column(Modifier.fillMaxSize().background(Palette.Sky)) {
         Box(Modifier.weight(1f)) {
             NavHost(nav, startDestination = Tab.SLEEP.route) {
                 composable(Tab.SLEEP.route) { HomeRoute(onOpenNight = { nav.navigate("night/$it") }) }
                 composable(Tab.HISTORY.route) { HistoryRoute(onOpenNight = { nav.navigate("night/$it") }) }
-                composable(Tab.PROFILE.route) { ProfileRoute() }
+                composable(Tab.PROFILE.route) { ProfileRoute(onOpenCredits = { nav.navigate(CREDITS_ROUTE) }) }
+                composable(CREDITS_ROUTE) { CreditsScreen(onBack = { nav.popBackStack() }) }
                 composable(NIGHT_ROUTE, arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
                     NightDetailRoute(e.arguments?.getLong("id") ?: 0, onBack = { nav.popBackStack() })
                 }

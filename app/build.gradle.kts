@@ -49,6 +49,8 @@ android {
 
     // Exported Room schemas, so MigrationTestHelper can build old database versions in tests.
     sourceSets.getByName("androidTest").assets.directories.add("$projectDir/schemas")
+    // Third-party licence texts (e.g. the font's OFL) ship inside the app, from the repo's licences/ folder.
+    sourceSets.getByName("main").assets.directories.add("$rootDir/licences")
 }
 
 ksp {

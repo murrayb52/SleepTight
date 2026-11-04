@@ -53,7 +53,7 @@ import java.time.LocalTime
 private enum class Picker { BEDTIME, SLEEP, SNOOZES, WINDOW, SOUND }
 
 @Composable
-fun ProfileRoute(viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)) {
+fun ProfileRoute(onOpenCredits: () -> Unit, viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     ProfileScreen(
         state,
@@ -64,6 +64,7 @@ fun ProfileRoute(viewModel: ProfileViewModel = viewModel(factory = ProfileViewMo
         onReminder = viewModel::onReminder,
         onBedsideCheck = viewModel::onBedsideCheck,
         onSound = viewModel::onSound,
+        onOpenCredits = onOpenCredits,
     )
 }
 
@@ -77,6 +78,7 @@ fun ProfileScreen(
     onReminder: (Boolean) -> Unit = {},
     onBedsideCheck: (Boolean) -> Unit = {},
     onSound: (String?) -> Unit = {},
+    onOpenCredits: () -> Unit = {},
 ) {
     val time = rememberTimeFormatter()
     val s = state.settings
@@ -114,6 +116,9 @@ fun ProfileScreen(
         Section(stringResource(R.string.section_data)) {
             ValueRow(stringResource(R.string.data_garmin), stringResource(R.string.coming_soon), enabled = false) {}
             ValueRow(stringResource(R.string.data_export), stringResource(R.string.coming_soon), enabled = false, last = true) {}
+        }
+        Section(stringResource(R.string.section_about)) {
+            ValueRow(stringResource(R.string.credits_row), "", last = true, onClick = onOpenCredits)
         }
         Text(stringResource(R.string.version, version), style = MaterialTheme.typography.bodySmall, color = Palette.Muted, modifier = Modifier.padding(start = 4.dp))
     }

@@ -10,17 +10,40 @@ import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import io.github.murrayb52.sleeptight.R
 
+/** Where a bundled sound came from, shown on the in-app credits page (and in `ASSETS.md`). */
+data class SoundCredit(val title: String, val author: String, val url: String)
+
 /**
  * The alarm sounds. [key] is what `Settings.alarmSound` stores (null = the generated chime).
- * Bundled sounds are CC0 recordings from Freesound, listed with their sources in `ASSETS.md`.
+ * Every bundled recording carries its [credit]: CC0 sounds from Freesound. Titles and authors are
+ * the originals, so they aren't translated.
  */
-enum class AlarmSound(val key: String?, @StringRes val label: Int, @RawRes val raw: Int?) {
-    CHIME(null, R.string.sound_chime, null),
-    BIRDSONG("birdsong", R.string.sound_birdsong, R.raw.alarm_birdsong),
-    EPIANO("epiano", R.string.sound_epiano, R.raw.alarm_epiano),
-    KALIMBA_DROPS("kalimba_drops", R.string.sound_kalimba_drops, R.raw.alarm_kalimba_drops),
-    KALIMBA("kalimba", R.string.sound_kalimba, R.raw.alarm_kalimba),
-    MUSIC_BOX("music_box", R.string.sound_music_box, R.raw.alarm_music_box),
+enum class AlarmSound(val key: String?, @StringRes val label: Int, @RawRes val raw: Int?, val credit: SoundCredit?) {
+    CHIME(null, R.string.sound_chime, null, null),
+    BIRDSONG(
+        "birdsong", R.string.sound_birdsong, R.raw.alarm_birdsong,
+        SoundCredit("bird song", "F1tz", "https://freesound.org/people/F1tz/sounds/795995/"),
+    ),
+    EPIANO(
+        "epiano", R.string.sound_epiano, R.raw.alarm_epiano,
+        SoundCredit("morning- epiano riff 1", "f-r-a-g-i-l-e", "https://freesound.org/people/f-r-a-g-i-l-e/sounds/476922/"),
+    ),
+    KALIMBA_DROPS(
+        "kalimba_drops", R.string.sound_kalimba_drops, R.raw.alarm_kalimba_drops,
+        SoundCredit(
+            "Brilliant Mesmerizing Kalimba Drops in a Airy Athmosphere Soundscape",
+            "bassimat",
+            "https://freesound.org/people/bassimat/sounds/854316/",
+        ),
+    ),
+    KALIMBA(
+        "kalimba", R.string.sound_kalimba, R.raw.alarm_kalimba,
+        SoundCredit("kalimba - simple effect", "Tetoszka", "https://freesound.org/people/Tetoszka/sounds/542318/"),
+    ),
+    MUSIC_BOX(
+        "music_box", R.string.sound_music_box, R.raw.alarm_music_box,
+        SoundCredit("Wien_bleibt_Wien.WAV", "thulitt", "https://freesound.org/people/thulitt/sounds/150025/"),
+    ),
     ;
 
     companion object {
