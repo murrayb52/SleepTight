@@ -168,3 +168,4 @@ Show these next to each metric. Keep them in one constants file:
 ## Notes on departures
 
 - **2026-11-04 (step 1):** `Night` also stores `zoneId`, the device zone at the bed tap, so local-time rules stay right for past nights after travelling. A bed tap before 12:00 belongs to the previous date's night. The 16-hour prompt offers "Set wake time" (a clock picker) and "Keep it open" rather than closing at the current time, which would record a forgotten night as 20+ hours in bed.
+- **2026-11-04 (step 2):** The final awakening before "I'm up" doesn't count as a wake-up. `UNKNOWN` stage counts as asleep. A noise-event cluster is a run of events each starting within 5 min of the previous one ending. The duration component and the regularity factors use the user's goals from Settings rather than fixed 22:00, 8 h and 1 snooze. Consistency covers the 7 nights ending with the scored night and needs at least 3 of them. Without sleep data there's no score.

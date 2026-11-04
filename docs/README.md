@@ -11,7 +11,7 @@ Pages are added as each build step lands:
 | Topic | Page | Build step |
 |---|---|---|
 | Nights, bed and wake taps, data model | [`nights.md`](nights.md) | 1 |
-| Night metrics, sleep score, regularity | _not yet written_ | 2 |
+| Night metrics, sleep score, regularity | [`metrics.md`](metrics.md) | 2 |
 | Overnight sound monitoring and noise events | _not yet written_ | 3 |
 | Smart alarm, snoozes, `AlarmEvents` hooks | _not yet written_ | 4 |
 | Garmin import via Health Connect, fallback estimation | _not yet written_ | 5 |

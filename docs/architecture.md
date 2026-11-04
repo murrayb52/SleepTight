@@ -36,7 +36,7 @@ flowchart LR
 | Module | What it is | Depends on | Status |
 |---|---|---|---|
 | `:app` | The Android app: UI, storage, services, alarm, Health Connect, export | `:metrics`, AndroidX | Scaffold only |
-| `:metrics` | Pure Kotlin/JVM maths: night metrics, sleep score, regularity, caffeine at bedtime, sleep debt | Kotlin stdlib only | `NightDate` only |
+| `:metrics` | Pure Kotlin/JVM maths: night metrics, sleep score, regularity, caffeine at bedtime, sleep debt | Kotlin stdlib only | Night metrics, score, regularity, `NightDate` (step 2). Caffeine and sleep debt planned (steps 7–8) |
 
 `:metrics` is kept separate so the build itself enforces "no Android here". That makes every number the app shows testable with fast JVM unit tests on synthetic nights, without an emulator. `:app` converts Room entities into `:metrics` input types and stores the results.
 
