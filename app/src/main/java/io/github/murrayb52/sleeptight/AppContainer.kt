@@ -2,7 +2,17 @@ package io.github.murrayb52.sleeptight
 
 import android.content.Context
 import io.github.murrayb52.sleeptight.data.NightRepository
+import io.github.murrayb52.sleeptight.data.RoomRecordingStore
 import io.github.murrayb52.sleeptight.data.SleepTightDatabase
+import io.github.murrayb52.sleeptight.tracking.NightTracker
+import io.github.murrayb52.sleeptight.tracking.NoiseEvents
+import io.github.murrayb52.sleeptight.tracking.RecordingStore
+import io.github.murrayb52.sleeptight.tracking.ServiceNightTracker
+import io.github.murrayb52.sleeptight.tracking.TrackingStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -12,6 +22,16 @@ class AppContainer(context: Context) {
     val clock: Clock = DeviceClock
     val database: SleepTightDatabase = SleepTightDatabase.create(context)
     val nightRepository = NightRepository(database, clock)
+
+    /** Outlives screens and the service, for work that must finish (such as the last sample flush). */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val recordingStore: RecordingStore = RoomRecordingStore(database)
+    val noiseEvents: NoiseEvents = NoiseEvents.None
+
+    /** Written by NightService, read by the UI. */
+    val trackingStatus = MutableStateFlow(TrackingStatus())
+    val nightTracker: NightTracker = ServiceNightTracker(context.applicationContext, trackingStatus)
 }
 
 /**

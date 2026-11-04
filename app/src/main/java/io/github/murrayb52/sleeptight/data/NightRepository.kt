@@ -25,6 +25,12 @@ class NightRepository(
 
     val settings: Flow<Settings> = settingsDao.observe().map { it ?: Settings() }
 
+    suspend fun getNight(id: Long): Night? = nights.get(id)
+
+    suspend fun getOpenNight(): Night? = nights.getOpenNight()
+
+    fun noiseEvents(nightId: Long): Flow<List<NoiseEvent>> = db.noiseEventDao().observeForNight(nightId)
+
     suspend fun getSettings(): Settings = settingsDao.get() ?: Settings()
 
     suspend fun updateSettings(settings: Settings) = settingsDao.upsert(settings.copy(id = Settings.SINGLETON_ID))

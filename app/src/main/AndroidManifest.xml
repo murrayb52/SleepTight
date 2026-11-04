@@ -2,8 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Permissions are added by the build step that needs them:
-         microphone + foreground service (step 3), exact alarm + notifications (step 4),
-         Health Connect reads (step 5). -->
+         exact alarm (step 4), Health Connect reads (step 5). -->
+
+    <!-- Step 3: overnight sound levels. Audio is processed in memory only; never stored. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".SleepTightApplication"
@@ -21,5 +28,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".tracking.NightService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
     </application>
 </manifest>

@@ -23,6 +23,43 @@
     <string name="close_night">Close night</string>
     <string name="cancel">Cancel</string>
 
+    <!-- Tonight: sound monitoring -->
+    <string name="sound_listening">Listening for noise</string>
+    <string name="sound_level_now">%1$+d dB vs your room</string>
+    <string name="sound_no_audio_stored">Sound levels only. No audio is recorded or stored.</string>
+    <string name="sound_starting">Starting sound monitoring…</string>
+    <string name="sound_mic_silent">The microphone is hearing complete silence. Check that microphone access isn\'t switched off in quick settings, and that no other app is using the mic.</string>
+    <string name="sound_off_title">Sound monitoring is off</string>
+    <string name="sound_off_mic_permission">SleepTight needs the microphone to measure how loud your room is. It only keeps sound levels, never audio. Your taps still record the night either way.</string>
+    <string name="allow_microphone">Allow microphone</string>
+    <string name="sound_stopped_title">Sound monitoring stopped</string>
+    <string name="sound_stopped_mic_unavailable">The microphone couldn\'t be used. Another app may be using it, such as a call or a voice recorder.</string>
+    <string name="sound_stopped_killed">Android stopped SleepTight in the background. Allow it to run without battery restrictions so this doesn\'t happen overnight.</string>
+    <string name="try_again">Try again</string>
+    <string name="resume">Resume</string>
+    <string name="noise_events_title">Noise events: %1$d</string>
+    <string name="noise_events_none">None so far.</string>
+    <string name="noise_event_line">%1$s · %2$d s · peak %3$+d dB</string>
+    <string name="noise_events_more">and %1$d earlier</string>
+    <string name="notifications_off">Notifications are off, so there\'s no tracking notification. Tracking still works.</string>
+
+    <!-- Battery -->
+    <string name="battery_title">Keep tracking running overnight</string>
+    <string name="battery_body">Android can stop apps in the background while you sleep. Let SleepTight run without battery restrictions so it keeps measuring until you get up.</string>
+    <string name="battery_allow">Allow</string>
+    <string name="battery_samsung">On Samsung phones, also open the app\'s settings, then Battery, and choose Unrestricted. Make sure SleepTight isn\'t listed under Sleeping apps or Deep sleeping apps (Settings → Battery → Background usage limits).</string>
+    <string name="open_app_settings">Open app settings</string>
+
+    <!-- Notifications -->
+    <string name="channel_tracking">Tracking tonight</string>
+    <string name="channel_tracking_description">Shown while SleepTight is measuring sound levels overnight</string>
+    <string name="channel_alerts">Tracking problems</string>
+    <string name="channel_alerts_description">Tells you if overnight tracking stopped</string>
+    <string name="notification_tracking_title">Tracking tonight</string>
+    <string name="notification_tracking_text">Measuring sound levels only. No audio is recorded.</string>
+    <string name="notification_stopped_title">Sound tracking stopped</string>
+    <string name="notification_stopped_text">SleepTight stopped measuring sound levels. Open the app to resume.</string>
+
     <!-- Errors -->
     <string name="error_wake_time_in_future">That time hasn\'t happened yet. Pick an earlier wake time.</string>
     <string name="error_wake_before_bed">Your phone\'s clock is earlier than your bed tap, so the night can\'t be closed. Check the date and time settings.</string>

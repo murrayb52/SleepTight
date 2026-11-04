@@ -21,6 +21,7 @@ A personal Android sleep tracker. The spec is `docs/plan/2026-11-04-v1-build-pla
 - Verify behaviour on the **emulator** before asking the user to test anything on their phone. Use `./gradlew installDebug` / `connectedAndroidTest`, plus `adb` for screenshots (`adb exec-out screencap -p`), logs (`adb logcat`) and UI checks.
 - The physical phone is for what an emulator can't show: overnight service survival, the real mic, the alarm, and Health Connect sync from Garmin.
 - All builds sign with the shared debug key (see the README), so `adb install -r` upgrades in place. Never uninstall the app on the user's phone, because that wipes their recorded nights.
+- **Never run `connectedAndroidTest` (or `installDebugAndroidTest`/`uninstallAll`) against the phone.** The connected test task uninstalls the app when it finishes. Run instrumented tests on the emulator only, with `ANDROID_SERIAL` set to it.
 
 ## Workflow
 

@@ -4,6 +4,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import io.github.murrayb52.sleeptight.tracking.LiveLevel
+import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.murrayb52.sleeptight.ui.theme.SleepTightTheme
 import org.junit.Assert.assertEquals
@@ -28,18 +31,78 @@ class HomeScreenTest {
     private var keptOpen: Long? = null
     private var closedAt: LocalTime? = null
 
-    private fun show(state: HomeUiState) = compose.setContent {
+    private var micRequests = 0
+    private var restarts = 0
+
+    private fun show(state: HomeUiState, device: DeviceState = DeviceState()) = compose.setContent {
         SleepTightTheme {
             HomeScreen(
                 state = state,
+                device = device,
                 message = null,
-                onGoingToBed = { bedTaps++ },
-                onImUp = { upTaps++ },
-                onKeepNightOpen = { keptOpen = it },
-                onCloseNightAt = { closedAt = it },
-                onMessageShown = {},
+                actions = HomeActions(
+                    onGoingToBed = { bedTaps++ },
+                    onImUp = { upTaps++ },
+                    onKeepNightOpen = { keptOpen = it },
+                    onCloseNightAt = { closedAt = it },
+                    onAllowMicrophone = { micRequests++ },
+                    onRestartTracking = { restarts++ },
+                ),
             )
         }
+    }
+
+    private val openNight = OpenNightUi(1, bed, Duration.ofMinutes(75))
+    private fun recording(relative: Double, silent: Boolean = false) = TrackingStatus(
+        TrackingStatus.State.RECORDING,
+        1,
+        LiveLevel(bed, -50.0 + relative, -50.0, relative, silent),
+    )
+
+    @Test
+    fun recordingShowsTheLiveLevelAndNoiseEvents() {
+        show(
+            HomeUiState(
+                loading = false,
+                zone = zone,
+                openNight = openNight,
+                tracking = recording(4.2),
+                noiseEvents = listOf(NoiseEventUi(bed.plus(Duration.ofMinutes(72)), Duration.ofSeconds(6), 22)),
+            ),
+        )
+        compose.onNodeWithText("+4 dB vs your room").assertIsDisplayed()
+        compose.onNodeWithText("Noise events: 1").assertIsDisplayed()
+        // The time follows the device 12/24-hour setting, so match the rest of the line.
+        compose.onNodeWithText("· 6 s · peak +22 dB", substring = true).assertExists()
+    }
+
+    @Test
+    fun silentMicIsFlagged() {
+        show(HomeUiState(loading = false, zone = zone, openNight = openNight, tracking = recording(0.0, silent = true)))
+        compose.onNodeWithText("complete silence", substring = true).assertExists()
+    }
+
+    @Test
+    fun deniedMicExplainsAndOffersToAllow() {
+        show(HomeUiState(loading = false, zone = zone, openNight = openNight), DeviceState(micGranted = false))
+        compose.onNodeWithText("Sound monitoring is off").assertIsDisplayed()
+        compose.onNodeWithText("Allow microphone").performScrollTo().performClick()
+        assertEquals(1, micRequests)
+    }
+
+    @Test
+    fun killedServiceOffersToResume() {
+        val stopped = TrackingStatus(TrackingStatus.State.STOPPED_WITH_PROBLEM, 1, problem = TrackingStatus.Problem.SERVICE_NOT_ALLOWED)
+        show(HomeUiState(loading = false, zone = zone, openNight = openNight, tracking = stopped))
+        compose.onNodeWithText("Resume").performScrollTo().performClick()
+        assertEquals(1, restarts)
+    }
+
+    @Test
+    fun batteryCardShowsSamsungAdviceOnlyOnSamsung() {
+        show(HomeUiState(loading = false, zone = zone), DeviceState(batteryUnrestricted = false, isSamsung = true))
+        compose.onNodeWithText("Keep tracking running overnight").assertExists()
+        compose.onNodeWithText("Deep sleeping apps", substring = true).assertExists()
     }
 
     @Test

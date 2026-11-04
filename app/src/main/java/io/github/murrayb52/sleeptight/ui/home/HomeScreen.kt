@@ -1,6 +1,10 @@
 package io.github.murrayb52.sleeptight.ui.home
 
+import android.Manifest
 import android.text.format.DateFormat
+import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,8 +21,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -37,12 +44,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.tracking.TrackingStatus
+import io.github.murrayb52.sleeptight.tracking.TrackingStatus.Problem
+import io.github.murrayb52.sleeptight.tracking.TrackingStatus.State
 import io.github.murrayb52.sleeptight.ui.theme.SleepTightTheme
 import java.time.Duration
 import java.time.Instant
@@ -50,30 +62,83 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/** Everything the Home screen can ask for. */
+data class HomeActions(
+    val onGoingToBed: () -> Unit = {},
+    val onImUp: () -> Unit = {},
+    val onKeepNightOpen: (nightId: Long) -> Unit = {},
+    val onCloseNightAt: (LocalTime) -> Unit = {},
+    val onMessageShown: () -> Unit = {},
+    val onAllowMicrophone: () -> Unit = {},
+    val onRestartTracking: () -> Unit = {},
+    val onAllowBattery: () -> Unit = {},
+    val onOpenAppSettings: () -> Unit = {},
+)
+
 @Composable
 fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val activity = LocalActivity.current
+    var device by remember { mutableStateOf(readDeviceState(context)) }
+
+    // Re-read permissions and battery state every time the app comes back, e.g. from Settings.
+    LifecycleResumeEffect(Unit) {
+        device = readDeviceState(context)
+        if (device.micGranted) viewModel.onEnsureTracking()
+        onPauseOrDispose {}
+    }
+
+    val bedPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        device = readDeviceState(context)
+        // The night starts either way: taps define it. Without the mic it just has no sound data.
+        viewModel.onGoingToBed(trackSound = device.micGranted)
+    }
+    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        device = readDeviceState(context)
+        if (granted) viewModel.onRestartTracking()
+    }
+
     HomeScreen(
         state = state,
+        device = device,
         message = message,
-        onGoingToBed = viewModel::onGoingToBed,
-        onImUp = viewModel::onImUp,
-        onKeepNightOpen = viewModel::onKeepNightOpen,
-        onCloseNightAt = viewModel::onCloseNightAt,
-        onMessageShown = viewModel::onMessageShown,
+        actions = HomeActions(
+            onGoingToBed = {
+                val missing = bedTimePermissions.filterNot { p ->
+                    when (p) {
+                        Manifest.permission.RECORD_AUDIO -> device.micGranted
+                        else -> device.notificationsGranted
+                    }
+                }
+                if (missing.isEmpty()) viewModel.onGoingToBed(trackSound = true) else bedPermissions.launch(missing.toTypedArray())
+            },
+            onImUp = viewModel::onImUp,
+            onKeepNightOpen = viewModel::onKeepNightOpen,
+            onCloseNightAt = viewModel::onCloseNightAt,
+            onMessageShown = viewModel::onMessageShown,
+            onAllowMicrophone = {
+                // After one denial Android still shows the dialog; after two it won't, so go to Settings.
+                if (activity?.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO) == true) {
+                    micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                } else {
+                    context.startActivity(appSettingsIntent(context))
+                }
+            },
+            onRestartTracking = viewModel::onRestartTracking,
+            onAllowBattery = { context.startActivity(batteryExemptionIntent(context)) },
+            onOpenAppSettings = { context.startActivity(appSettingsIntent(context)) },
+        ),
     )
 }
 
 @Composable
 fun HomeScreen(
     state: HomeUiState,
+    device: DeviceState,
     message: Int?,
-    onGoingToBed: () -> Unit,
-    onImUp: () -> Unit,
-    onKeepNightOpen: (nightId: Long) -> Unit,
-    onCloseNightAt: (LocalTime) -> Unit,
-    onMessageShown: () -> Unit,
+    actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -81,7 +146,7 @@ fun HomeScreen(
     LaunchedEffect(messageText) {
         if (messageText != null) {
             snackbarHostState.showSnackbar(messageText)
-            onMessageShown()
+            actions.onMessageShown()
         }
     }
 
@@ -98,20 +163,26 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (!state.loading) {
-                HomeContent(state, onGoingToBed, onImUp)
+                HomeContent(state, device, actions)
             }
         }
     }
 
     state.overduePrompt?.let { prompt ->
-        OverdueNightDialog(prompt, state.zone, onKeepOpen = { onKeepNightOpen(prompt.nightId) }, onCloseAt = onCloseNightAt)
+        OverdueNightDialog(
+            prompt,
+            state.zone,
+            onKeepOpen = { actions.onKeepNightOpen(prompt.nightId) },
+            onCloseAt = actions.onCloseNightAt,
+        )
     }
 }
 
+private val contentWidth = Modifier.fillMaxWidth().widthIn(max = 480.dp)
+
 @Composable
-private fun HomeContent(state: HomeUiState, onGoingToBed: () -> Unit, onImUp: () -> Unit) {
+private fun HomeContent(state: HomeUiState, device: DeviceState, actions: HomeActions) {
     val time = rememberTimeFormatter()
-    val contentWidth = Modifier.fillMaxWidth().widthIn(max = 480.dp)
 
     CentredText(stringResource(R.string.app_name), MaterialTheme.typography.headlineLarge, contentWidth)
     Spacer(Modifier.height(8.dp))
@@ -135,17 +206,36 @@ private fun HomeContent(state: HomeUiState, onGoingToBed: () -> Unit, onImUp: ()
     Spacer(Modifier.height(40.dp))
     BigTapButton(
         text = stringResource(if (open != null) R.string.im_up else R.string.going_to_bed),
-        onClick = if (open != null) onImUp else onGoingToBed,
+        onClick = if (open != null) actions.onImUp else actions.onGoingToBed,
         emphasiseMorning = open != null,
         modifier = contentWidth,
     )
-    Spacer(Modifier.height(40.dp))
+    Spacer(Modifier.height(32.dp))
 
-    val last = state.lastNight
-    if (last != null) {
-        LastNightCard(last, state.zone, time, contentWidth)
-    } else if (open == null) {
-        CentredText(stringResource(R.string.first_night_hint), MaterialTheme.typography.bodyMedium, contentWidth)
+    if (!device.batteryUnrestricted) {
+        BatteryCard(device.isSamsung, actions)
+        Spacer(Modifier.height(16.dp))
+    }
+
+    if (open != null) {
+        SoundCard(state.tracking, device, actions)
+        Spacer(Modifier.height(16.dp))
+        NoiseEventsCard(state.noiseEvents, state.zone, time)
+        if (!device.notificationsGranted) {
+            Spacer(Modifier.height(16.dp))
+            CentredText(
+                stringResource(R.string.notifications_off),
+                MaterialTheme.typography.bodySmall,
+                contentWidth,
+            )
+        }
+    } else {
+        val last = state.lastNight
+        if (last != null) {
+            LastNightCard(last, state.zone, time)
+        } else {
+            CentredText(stringResource(R.string.first_night_hint), MaterialTheme.typography.bodyMedium, contentWidth)
+        }
     }
 }
 
@@ -170,26 +260,136 @@ private fun BigTapButton(text: String, onClick: () -> Unit, emphasiseMorning: Bo
 }
 
 @Composable
-private fun LastNightCard(last: LastNightUi, zone: ZoneId, time: DateTimeFormatter, modifier: Modifier) {
-    Card(modifier = modifier) {
+private fun InfoCard(warning: Boolean = false, content: @Composable () -> Unit) {
+    val colours = if (warning) {
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    } else {
+        CardDefaults.cardColors()
+    }
+    Card(modifier = contentWidth, colors = colours) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            CentredText(stringResource(R.string.last_night), MaterialTheme.typography.titleMedium)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) { content() }
+    }
+}
+
+@Composable
+private fun SoundCard(tracking: TrackingStatus, device: DeviceState, actions: HomeActions) {
+    val problem = when {
+        !device.micGranted -> Problem.MIC_PERMISSION
+        tracking.state == State.STOPPED_WITH_PROBLEM -> tracking.problem
+        else -> null
+    }
+    when (problem) {
+        Problem.MIC_PERMISSION -> InfoCard(warning = true) {
+            CentredText(stringResource(R.string.sound_off_title), MaterialTheme.typography.titleMedium)
+            CentredText(stringResource(R.string.sound_off_mic_permission), MaterialTheme.typography.bodyMedium)
+            Button(onClick = actions.onAllowMicrophone) { Text(stringResource(R.string.allow_microphone)) }
+        }
+        Problem.MIC_UNAVAILABLE -> InfoCard(warning = true) {
+            CentredText(stringResource(R.string.sound_stopped_title), MaterialTheme.typography.titleMedium)
+            CentredText(stringResource(R.string.sound_stopped_mic_unavailable), MaterialTheme.typography.bodyMedium)
+            Button(onClick = actions.onRestartTracking) { Text(stringResource(R.string.try_again)) }
+        }
+        Problem.SERVICE_NOT_ALLOWED -> InfoCard(warning = true) {
+            CentredText(stringResource(R.string.sound_stopped_title), MaterialTheme.typography.titleMedium)
+            CentredText(stringResource(R.string.sound_stopped_killed), MaterialTheme.typography.bodyMedium)
+            Button(onClick = actions.onRestartTracking) { Text(stringResource(R.string.resume)) }
+        }
+        null -> InfoCard {
+            val live = tracking.live
+            if (tracking.state != State.RECORDING || live == null) {
+                CentredText(stringResource(R.string.sound_starting), MaterialTheme.typography.bodyMedium)
+            } else {
+                CentredText(stringResource(R.string.sound_listening), MaterialTheme.typography.titleMedium)
+                val relative = Math.round(live.dbRelative).toInt()
+                CentredText(
+                    stringResource(R.string.sound_level_now, relative),
+                    MaterialTheme.typography.headlineSmall,
+                )
+                LinearProgressIndicator(
+                    progress = { (live.dbRelative / LEVEL_BAR_MAX_DB).toFloat().coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                CentredText(stringResource(R.string.sound_no_audio_stored), MaterialTheme.typography.bodySmall)
+                if (live.micSilent) {
+                    CentredText(
+                        stringResource(R.string.sound_mic_silent),
+                        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.error),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The live level bar is full at this many dB above baseline (the noise threshold is 15). */
+private const val LEVEL_BAR_MAX_DB = 30.0
+
+/** Shows at most this many events; older ones are summarised. */
+private const val MAX_EVENTS_LISTED = 10
+
+@Composable
+private fun NoiseEventsCard(events: List<NoiseEventUi>, zone: ZoneId, time: DateTimeFormatter) {
+    InfoCard {
+        CentredText(stringResource(R.string.noise_events_title, events.size), MaterialTheme.typography.titleMedium)
+        if (events.isEmpty()) {
+            CentredText(stringResource(R.string.noise_events_none), MaterialTheme.typography.bodyMedium)
+        }
+        events.take(MAX_EVENTS_LISTED).forEach { event ->
             CentredText(
                 stringResource(
-                    R.string.time_range,
-                    time.format(last.bedTapAt.atZone(zone)),
-                    time.format(last.wakeTapAt.atZone(zone)),
+                    R.string.noise_event_line,
+                    time.format(event.start.atZone(zone)),
+                    event.duration.toSeconds(),
+                    event.peakDbRelative,
                 ),
-                MaterialTheme.typography.headlineSmall,
-            )
-            CentredText(
-                stringResource(R.string.time_in_bed, formatDuration(last.timeInBed)),
-                MaterialTheme.typography.bodyLarge,
+                MaterialTheme.typography.bodyMedium,
             )
         }
+        if (events.size > MAX_EVENTS_LISTED) {
+            CentredText(
+                stringResource(R.string.noise_events_more, events.size - MAX_EVENTS_LISTED),
+                MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BatteryCard(isSamsung: Boolean, actions: HomeActions) {
+    InfoCard {
+        CentredText(stringResource(R.string.battery_title), MaterialTheme.typography.titleMedium)
+        CentredText(stringResource(R.string.battery_body), MaterialTheme.typography.bodyMedium)
+        Button(onClick = actions.onAllowBattery) { Text(stringResource(R.string.battery_allow)) }
+        if (isSamsung) {
+            CentredText(stringResource(R.string.battery_samsung), MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick = actions.onOpenAppSettings) { Text(stringResource(R.string.open_app_settings)) }
+        }
+    }
+}
+
+@Composable
+private fun LastNightCard(last: LastNightUi, zone: ZoneId, time: DateTimeFormatter) {
+    InfoCard {
+        CentredText(stringResource(R.string.last_night), MaterialTheme.typography.titleMedium)
+        CentredText(
+            stringResource(
+                R.string.time_range,
+                time.format(last.bedTapAt.atZone(zone)),
+                time.format(last.wakeTapAt.atZone(zone)),
+            ),
+            MaterialTheme.typography.headlineSmall,
+        )
+        CentredText(
+            stringResource(R.string.time_in_bed, formatDuration(last.timeInBed)),
+            MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 
@@ -244,7 +444,7 @@ private fun OverdueNightDialog(
 
 /** Text that stays centred when it wraps onto several lines on narrow screens. */
 @Composable
-private fun CentredText(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier = Modifier) {
+private fun CentredText(text: String, style: TextStyle, modifier: Modifier = Modifier) {
     Text(text = text, style = style, textAlign = TextAlign.Center, modifier = modifier)
 }
 
@@ -275,12 +475,9 @@ private fun HomeScreenNarrowPreview() {
                 loading = false,
                 lastNight = LastNightUi(now.minus(Duration.ofHours(32)), now.minus(Duration.ofHours(24)), Duration.ofHours(8)),
             ),
+            device = DeviceState(),
             message = null,
-            onGoingToBed = {},
-            onImUp = {},
-            onKeepNightOpen = {},
-            onCloseNightAt = {},
-            onMessageShown = {},
+            actions = HomeActions(),
         )
     }
 }

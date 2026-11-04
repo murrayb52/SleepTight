@@ -1,6 +1,8 @@
 package io.github.murrayb52.sleeptight.ui.home
 
 import io.github.murrayb52.sleeptight.data.Night
+import io.github.murrayb52.sleeptight.data.NoiseEvent
+import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
@@ -16,6 +18,26 @@ data class HomeUiState(
     val openNight: OpenNightUi? = null,
     val lastNight: LastNightUi? = null,
     val overduePrompt: OverduePrompt? = null,
+    /** Overnight sound monitoring; only meaningful while a night is open. */
+    val tracking: TrackingStatus = TrackingStatus(),
+    /** Noise events so far in the open night, most recent first. */
+    val noiseEvents: List<NoiseEventUi> = emptyList(),
+)
+
+data class NoiseEventUi(val start: Instant, val duration: Duration, val peakDbRelative: Int)
+
+fun NoiseEvent.toUi() = NoiseEventUi(
+    start = Instant.ofEpochMilli(start),
+    duration = Duration.ofMillis(end - start),
+    peakDbRelative = Math.round(peakDbRelative),
+)
+
+/** Device-side facts the screen needs, re-read whenever the app comes back to the foreground. */
+data class DeviceState(
+    val micGranted: Boolean = true,
+    val notificationsGranted: Boolean = true,
+    val batteryUnrestricted: Boolean = true,
+    val isSamsung: Boolean = false,
 )
 
 data class OpenNightUi(val nightId: Long, val bedTapAt: Instant, val inBedFor: Duration)

@@ -168,7 +168,7 @@ Show these next to each metric. Keep them in one constants file:
   - Stored in app-private storage only, never in shared storage, never in the JSON export, never backed up.
   - Playback from the Morning report's noise timeline and a "Loud moments" list.
   - **Open question:** loudest 5 per night (up to 35 clips) or 5 across the whole 7 days. Assumed per night until confirmed.
-  - **Design for it in step 3:** `NightService` keeps the last few seconds of audio in memory only, and reports noise events through a `NoiseEvents` interface (no-op in v1), so clip capture plugs in later without restructuring.
+  - **Design for it in step 3:** `NightService` reports noise events through a `NoiseEvents` interface (no-op in v1), so clip capture plugs in later without restructuring. The in-memory pre-roll buffer is added with the feature itself.
 
 ## Risks to watch
 - Some Android brands kill foreground services despite exemptions. Test a full night early (after step 3).
@@ -179,3 +179,4 @@ Show these next to each metric. Keep them in one constants file:
 
 - **2026-11-04 (step 1):** `Night` also stores `zoneId`, the device zone at the bed tap, so local-time rules stay right for past nights after travelling. A bed tap before 12:00 belongs to the previous date's night. The 16-hour prompt offers "Set wake time" (a clock picker) and "Keep it open" rather than closing at the current time, which would record a forgotten night as 20+ hours in bed.
 - **2026-11-04 (step 2):** The final awakening before "I'm up" doesn't count as a wake-up. `UNKNOWN` stage counts as asleep. A noise-event cluster is a run of events each starting within 5 min of the previous one ending. The duration component and the regularity factors use the user's goals from Settings rather than fixed 22:00, 8 h and 1 snooze. Consistency covers the 7 nights ending with the scored night and needs at least 3 of them. Without sleep data there's no score.
+- **2026-11-04 (step 3):** The Tonight screen is Home's in-bed state rather than a separate screen, so there's nothing to navigate at night. The service holds a partial wake lock (20-hour timeout) and uses the `VOICE_RECOGNITION` source to avoid automatic gain control. The baseline excludes the current second. Opening the app restarts monitoring if Android stopped it. Activity per minute is derived from stored samples rather than stored. Measured storage is about 1.3 MB per 8-hour night at one sample per second, which is kept for now.

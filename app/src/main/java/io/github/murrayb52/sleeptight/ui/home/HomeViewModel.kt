@@ -8,21 +8,30 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.data.NightRepository
+import io.github.murrayb52.sleeptight.tracking.NightTracker
+import io.github.murrayb52.sleeptight.tracking.TrackingStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalTime
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val repository: NightRepository,
+    private val tracker: NightTracker,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -42,13 +51,20 @@ class HomeViewModel(
     /** A one-off message (string resource) for the snackbar, or null. */
     val message: StateFlow<Int?> = _message.asStateFlow()
 
+    private val nights = combine(repository.openNight, repository.latestClosedNight, repository.settings, ::Triple)
+
+    private val openNightNoise = repository.openNight
+        .map { it?.id }
+        .distinctUntilChanged()
+        .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else repository.noiseEvents(id) }
+
     val state: StateFlow<HomeUiState> = combine(
-        repository.openNight,
-        repository.latestClosedNight,
-        repository.settings,
+        nights,
         minuteTicker,
         promptDismissedFor,
-    ) { open, last, settings, now, dismissed ->
+        tracker.status,
+        openNightNoise,
+    ) { (open, last, settings), now, dismissed, tracking, noise ->
         buildHomeUiState(
             openNight = open,
             lastNight = last,
@@ -56,21 +72,51 @@ class HomeViewModel(
             zone = clock.zone,
             targetSleep = Duration.ofMinutes(settings.targetSleepMinutes.toLong()),
             promptDismissedForNightId = dismissed,
+        ).copy(
+            tracking = tracking,
+            noiseEvents = noise.map { it.toUi() }.sortedByDescending { it.start },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
-    fun onGoingToBed() {
-        viewModelScope.launch { repository.goToBed() }
+    /** Opens the night; starts sound monitoring if the microphone is allowed. */
+    fun onGoingToBed(trackSound: Boolean) {
+        viewModelScope.launch {
+            val night = repository.goToBed()
+            if (trackSound) tracker.start(night.id)
+        }
     }
 
     fun onImUp() {
         viewModelScope.launch {
             try {
-                repository.wakeUp()
+                if (repository.wakeUp() != null) tracker.stop()
             } catch (e: IllegalArgumentException) {
                 // Only possible if the phone's clock moved back past the bed tap.
                 _message.value = R.string.error_wake_before_bed
             }
+        }
+    }
+
+    /**
+     * Called when the app comes to the foreground with the microphone allowed: restarts monitoring
+     * for an open night if it isn't running, including after Android killed it in the background
+     * (opening the app is when a restart is allowed again). A microphone failure isn't retried
+     * automatically; that waits for the user to tap "Try again".
+     */
+    fun onEnsureTracking() {
+        viewModelScope.launch {
+            val open = repository.getOpenNight() ?: return@launch
+            val status = tracker.status.value
+            val stalled = status.state == TrackingStatus.State.IDLE ||
+                status.problem == TrackingStatus.Problem.MIC_PERMISSION ||
+                status.problem == TrackingStatus.Problem.SERVICE_NOT_ALLOWED
+            if (stalled) tracker.start(open.id)
+        }
+    }
+
+    fun onRestartTracking() {
+        viewModelScope.launch {
+            repository.getOpenNight()?.let { tracker.start(it.id) }
         }
     }
 
@@ -86,7 +132,10 @@ class HomeViewModel(
             _message.value = R.string.error_wake_time_in_future
             return
         }
-        viewModelScope.launch { repository.wakeUp(wake) }
+        viewModelScope.launch {
+            repository.wakeUp(wake)
+            tracker.stop()
+        }
     }
 
     fun onMessageShown() {
@@ -97,7 +146,7 @@ class HomeViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as SleepTightApplication
-                HomeViewModel(app.container.nightRepository, app.container.clock)
+                HomeViewModel(app.container.nightRepository, app.container.nightTracker, app.container.clock)
             }
         }
     }
