@@ -31,3 +31,10 @@ jobs:
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: sleeptight-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30

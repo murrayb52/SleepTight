@@ -1,6 +1,6 @@
 # SleepTight: working conventions
 
-A personal Android sleep tracker. The spec is `docs/PLAN.md`. Read the relevant section before building a feature, and update the plan if a decision changes it.
+A personal Android sleep tracker. The spec is `docs/2026-11-04-v1-build-plan.md`. Read the relevant section before building a feature. If a decision departs from it, add a dated note in the plan rather than diverging silently.
 
 ## Commands
 
