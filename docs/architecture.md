@@ -91,7 +91,7 @@ sequenceDiagram
 
 - **Taps define the night.** `bedTapAt` and `wakeTapAt` are the night's boundaries. Imported data is always trimmed to them, so Garmin's idea of when you slept never overrides yours.
 - **Scores are derived, not stored facts.** Garmin data can arrive hours late, after the watch syncs. The repository can recompute any night from stored data at any time. `Night.scoreJson` is a cache, refreshed whenever new data arrives (on "I'm up", on app open and on manual refresh).
-- **No raw audio, ever.** `NightService` processes audio buffers in memory and keeps only levels. That's a privacy rule, and it also keeps storage small.
+- **No raw audio, ever.** `NightService` processes audio buffers in memory and keeps only levels. That's a privacy rule, and it also keeps storage small. The one planned exception is opt-in loud-moment clips (see the plan's "Later" list). They plug in through the `NoiseEvents` hook, so v1 doesn't change shape for them.
 - **Relative sound levels.** Phone mics aren't calibrated, so everything is relative to a rolling 20-minute median baseline rather than absolute dB.
 - **Extension points are interfaces now.** `AlarmEvents` (no-op in v1, Philips Hue sunrise later) and `GarminSource` (Health Connect in v1, the unofficial Garmin API later) let future features plug in without restructuring.
 - **All tuning in one place.** Score weights and thresholds live in `ScoreConfig`, and reference ranges live in a single constants file.

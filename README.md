@@ -20,7 +20,7 @@ Yet another sleep app, built to track and improve sleep quality. It's a personal
 
 1. **The phone is the source of truth for the night's window.** Garmin only adds detail inside it.
 2. **Every number can be explained.** The score always shows its breakdown, and metrics sit next to reference ranges.
-3. **Privacy first.** Everything stays on the device, with no account and no cloud. Sound levels only, never audio.
+3. **Privacy first.** Everything stays on the device, with no account and no cloud. Sound levels only, never audio. (A future opt-in feature may keep a few short clips of the loudest moments, under strict limits.)
 4. **Goals, not rules.** The app records snoozes and late nights and never blocks them.
 
 ## How it's built
@@ -128,6 +128,7 @@ Taken from [`docs/plan/2026-11-04-v1-build-plan.md`](docs/plan/2026-11-04-v1-bui
 - A Connect IQ watch app for a wrist-driven smart alarm
 - Sound classification (snoring, talking, coughing)
 - Falling-asleep sounds and stories
+- Opt-in playback of the loudest moments of recent nights: at most 5 short clips per night, kept for 7 nights (the one planned exception to "levels only")
 
 ## Disclaimer
 

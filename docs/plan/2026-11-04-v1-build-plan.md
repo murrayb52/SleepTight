@@ -159,6 +159,16 @@ Show these next to each metric. Keep them in one constants file:
 - **Connect IQ watch app** for live wrist movement, which would enable a watch-driven smart alarm.
 - **Sound classification** (snoring, talking, coughing).
 - **Falling-asleep sounds**: sleep sounds and stories.
+- **Loud-moment playback** (requested 2026-11-04): play back short clips of the loudest moments of recent nights. This is the one planned exception to "never write audio to disk", and it's tightly bounded:
+  - **Opt-in**, off by default, with a clear explanation in Settings (clips may capture anyone else in the room). While it's on, the tracking notification says clips are being kept.
+  - **Only loud moments.** A clip is cut around a noise event: about 5 s before it (from an in-memory ring buffer) until the level falls back towards baseline, at most 20 s. Nothing else is ever written.
+  - **Loudest 5 per night** by peak dB. During the night, a louder event replaces the quietest kept clip, so at most 5 clip files exist per night.
+  - **Rolling 7 nights.** Clips from older nights are deleted automatically, and deleting a night deletes its clips.
+  - **Hard size cap** (for example 20 MB in total) as a safety net. AAC at 16 kHz mono is roughly 4 KB/s, so 35 clips of 15 s come to about 2 MB.
+  - Stored in app-private storage only, never in shared storage, never in the JSON export, never backed up.
+  - Playback from the Morning report's noise timeline and a "Loud moments" list.
+  - **Open question:** loudest 5 per night (up to 35 clips) or 5 across the whole 7 days. Assumed per night until confirmed.
+  - **Design for it in step 3:** `NightService` keeps the last few seconds of audio in memory only, and reports noise events through a `NoiseEvents` interface (no-op in v1), so clip capture plugs in later without restructuring.
 
 ## Risks to watch
 - Some Android brands kill foreground services despite exemptions. Test a full night early (after step 3).

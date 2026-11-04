@@ -37,7 +37,7 @@ A personal Android sleep tracker. The spec is `docs/plan/2026-11-04-v1-build-pla
 - **All score weights and thresholds live in `ScoreConfig`.** All reference ranges live in one constants file. No magic numbers scattered through the code.
 - **Scores are recomputable.** Health Connect data can arrive hours late, so metrics and score must be derivable from stored data at any time. `scoreJson` on `Night` is a cache, not the source of truth.
 - **Taps define the night.** Trim every imported segment to `[bedTapAt, wakeTapAt]`.
-- **Never write audio to disk.** `NightService` computes levels in memory and stores only dB values.
+- **Never write audio to disk.** `NightService` computes levels in memory and stores only dB values. The only planned exception is the opt-in loud-moment clips under "Later" in the plan. Build them only when that feature is explicitly started, and never in v1.
 - **Extension points stay as interfaces:** `AlarmEvents` (no-op in v1, Hue later) and `GarminSource` (Health Connect in v1, unofficial API later).
 - **Every permission has a denial path** with a clear explanation in the UI. Never fail silently.
 
