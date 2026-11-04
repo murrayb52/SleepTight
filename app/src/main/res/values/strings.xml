@@ -122,6 +122,7 @@
     <string name="not_listening_pill">Not listening</string>
     <string name="in_bed_since_for">In bed since %1$s · %2$s</string>
     <string name="noise_latest">latest %1$s · peak %2$+d dB</string>
+    <string name="keep_holding">Keep holding…</string>
     <string name="hold_hint">Press and hold, so a bump in the night can\'t end it</string>
 
     <!-- Alarm screen -->

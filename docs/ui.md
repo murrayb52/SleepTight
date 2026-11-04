@@ -37,7 +37,7 @@ Near-black sky with twinkling stars and no nav bar. From the top:
 - the noise panel: a strip from the bed tap to now with a tick per event, and the latest events
 - a gentle wave whose height follows the live level: the service publishes a display level every **100 ms** (the stored level stays once a second), the height eases towards it over 300 ms and the wave flows continuously, so it moves smoothly rather than jumping each second
 
-**I'm up** must be **pressed and held for 1.2 s**. A night under **5 minutes** is taken as a mis-tap: I'm up discards it and says so (it fills as you hold), so a bump in the night can't end the night. Screen readers get a normal click.
+**I'm up** must be **pressed and held for 1.2 s**. While you hold, it fills with amber from left to right, its border turns amber and the label reads "Keep holding…"; letting go early drains the fill, and completing it gives a short vibration. A night under **5 minutes** is taken as a mis-tap: I'm up discards it and says so (it fills as you hold), so a bump in the night can't end the night. Screen readers get a normal click.
 
 ## Alarm screen
 

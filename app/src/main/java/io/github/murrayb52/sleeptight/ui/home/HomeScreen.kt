@@ -529,7 +529,12 @@ private fun TonightContent(state: HomeUiState, device: DeviceState, actions: Hom
             }
             Spacer(Modifier.height(16.dp))
         }
-        HoldButton(stringResource(R.string.im_up), onHeld = actions.onImUp, modifier = contentWidth.testTag("imUp"))
+        HoldButton(
+            stringResource(R.string.im_up),
+            holdingText = stringResource(R.string.keep_holding),
+            onHeld = actions.onImUp,
+            modifier = contentWidth.testTag("imUp"),
+        )
         Spacer(Modifier.height(8.dp))
         CentredText(stringResource(R.string.hold_hint), MaterialTheme.typography.bodySmall, contentWidth, Color(0xFF8790B0))
     }
