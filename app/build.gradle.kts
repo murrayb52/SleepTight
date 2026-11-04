@@ -4,6 +4,19 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Version comes from git, so every build is identifiable:
+// at a tag v0.2.0 → "0.2.0"; three commits later → "0.2.0-3-gabc1234"; uncommitted changes add "-dirty".
+// versionCode is the commit count on HEAD, so each new commit installs as an upgrade.
+val gitVersionName: String = providers.exec {
+    commandLine("git", "describe", "--tags", "--match", "v[0-9]*", "--always", "--dirty")
+    isIgnoreExitValue = true
+}.standardOutput.asText.get().trim().removePrefix("v").ifBlank { "0.0.0-unknown" }
+
+val gitVersionCode: Int = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+    isIgnoreExitValue = true
+}.standardOutput.asText.get().trim().toIntOrNull() ?: 1
+
 android {
     namespace = "io.github.murrayb52.sleeptight"
     compileSdk = 37
@@ -12,8 +25,8 @@ android {
         applicationId = "io.github.murrayb52.sleeptight"
         minSdk = 28
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = gitVersionCode
+        versionName = gitVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

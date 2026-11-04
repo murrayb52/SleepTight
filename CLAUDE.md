@@ -27,6 +27,7 @@ A personal Android sleep tracker. The spec is `docs/plan/2026-11-04-v1-build-pla
 - Work through the plan's **build order**, with one or more commits per step. Tick the step off in the README's build order list when it's done.
 - **Run the unit tests before each commit.** For `:metrics` changes, write the test first (synthetic nights) and then the code.
 - **Document how it works as you build it.** Each feature gets (or updates) a page in `docs/` explaining how it actually behaves: inputs, formulas, thresholds, edge cases. Link it from `docs/README.md`. The plan in `docs/plan/` is the original intent, and `docs/` is the current truth. Keep the two apart.
+- When a build step is done and its CI run passes, tag that commit `v0.<step>.0` (annotated) and push the tag. `v1.0.0` follows step 10. The app version comes from these tags.
 - Commit messages: imperative mood, prefixed with the step, e.g. `Step 2: add efficiency component to score`.
 - Don't add a dependency without putting it in `gradle/libs.versions.toml`. Don't hard-code versions in module build files.
 

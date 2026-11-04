@@ -116,3 +116,5 @@ Kotlin coroutines throughout. Room DAOs expose `Flow`s that the ViewModels colle
 ## Builds and signing
 
 CI builds a debug APK on every push. Local and CI builds both sign with the **same debug key**: it's kept locally at `~/.android/debug.keystore` and in CI as the `DEBUG_KEYSTORE_BASE64` secret, and CI checks the signer fingerprint. That means any build installs over the previous one, and the app's data survives the update.
+
+The version comes from git: `versionName` is `git describe` of the latest `v*` tag (e.g. `0.2.0`, or `0.2.0-3-gabc1234` between tags), and `versionCode` is the commit count. CI names the artifact and the APK with that version, and also builds each pushed tag.

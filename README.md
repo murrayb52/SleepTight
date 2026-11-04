@@ -79,15 +79,19 @@ You don't need a separate Gradle install. Use the wrapper:
 
 ### Installing a CI build
 
-CI (GitHub Actions) runs the unit tests and builds the debug APK on every push to `main` and on every pull request. Each run keeps the APK as the `sleeptight-debug-apk` artifact for 30 days, so you can install a build without a local Android SDK:
+CI (GitHub Actions) runs the unit tests and builds the debug APK on every push to `main`, every version tag and every pull request. Each run keeps the APK for 30 days as an artifact named `sleeptight-<version>-debug`, containing `sleeptight-<version>-debug.apk`. To install a build without a local Android SDK:
 
 ```bash
-gh run download -n sleeptight-debug-apk && adb install -r app-debug.apk
+gh run download <run-id> -p 'sleeptight-*' && adb install -r sleeptight-*/sleeptight-*-debug.apk
 ```
 
-Or download it from the run page on GitHub and open it on the phone.
+Or, on the phone, download the artifact from the run page (signed in to GitHub), extract the zip in a file manager and tap the APK. Android should offer **Update**.
 
-Local and CI builds are all signed with the same debug key, kept in the `DEBUG_KEYSTORE_BASE64` repository secret, so each new build installs **over** the previous one and your recorded nights are kept. To build locally with that key, put it at `~/.android/debug.keystore`.
+Local and CI builds are all signed with the same debug key, kept in the `DEBUG_KEYSTORE_BASE64` repository secret, so each new build installs **over** the previous one and your recorded nights are kept. To build locally with that key, put it at `~/.android/debug.keystore`. CI builds 1–3 came before the shared key; a phone with one of those installed needs a one-time uninstall (they had no data model, so there's nothing to lose).
+
+### Versions
+
+The version comes from git. Each finished build step is tagged `v0.<step>.0`, and `v1.0.0` follows step 10. A build at a tag is `0.2.0`; later commits are `0.2.0-3-gabc1234` (three commits after the tag, at commit `abc1234`); local builds with uncommitted changes end in `-dirty`. The Android `versionCode` is the commit count, so every new build installs as an upgrade. The installed version shows in Android's App info.
 
 ## Permissions (as features land)
 
