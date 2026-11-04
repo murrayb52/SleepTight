@@ -14,6 +14,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Alarm screen**: a very slow sunrise while ringing, swipe up to snooze, Stop sweeps to day with the night so far and an I'm up button (a separate tap) | [ui.md](ui.md#alarm-screen) |
 | **Alarm sounds**: the generated chime plus five CC0 Freesound recordings (birdsong, piano, two kalimbas, music box), chosen and previewed in Profile | [alarm.md](alarm.md#sounds) |
 | **Credits in the app**: Profile → About lists every bundled sound and the typeface, with links and the font's licence text | [ui.md](ui.md#profile), [ASSETS.md](../ASSETS.md) |
+| **A sleep score for every night**: from Garmin stages when there are some, otherwise estimated from overnight sound; breakdown with the measurements behind each part and a sleep-stage chart | [metrics.md](metrics.md#scoring-in-the-app), [ui.md](ui.md#one-night) |
 | **Score explainers**: ⓘ icons on the sleep score and each of its five parts, with numbers taken from `ScoreConfig` and your goals | [ui.md](ui.md#one-night) |
 | **History** (7/30 days, averages, week strip, night list), **one night's page**, **Profile** with goals, alarm and reminder settings | [ui.md](ui.md) |
 | **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
@@ -36,7 +37,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 
 ## Agreed, not built yet
 
-- **Sleep stages and score on the night page and dials** once step 5 provides sleep data (Garmin or the activity estimate).
+- **Garmin import via Health Connect** (rest of step 5): stages and heart rate, trimmed to the taps, Garmin origin only.
 - **Opt-in loud-moment playback**: the loudest 5 short clips per night, kept for 7 nights, with a hard size cap. It's the one planned exception to "never store audio". Spec in the [v1 plan's "Later" list](plan/2026-11-04-v1-build-plan.md#later-not-v1-but-design-for-it).
 
 ## Future ideas

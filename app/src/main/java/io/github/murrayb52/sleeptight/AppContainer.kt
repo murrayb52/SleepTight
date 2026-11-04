@@ -7,6 +7,7 @@ import io.github.murrayb52.sleeptight.alarm.AlarmScheduler
 import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.alarm.BedtimeReminderScheduler
 import io.github.murrayb52.sleeptight.data.NightRepository
+import io.github.murrayb52.sleeptight.scoring.NightScorer
 import io.github.murrayb52.sleeptight.data.RoomRecordingStore
 import io.github.murrayb52.sleeptight.data.SleepTightDatabase
 import io.github.murrayb52.sleeptight.tracking.NightTracker
@@ -18,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -45,6 +47,13 @@ class AppContainer(context: Context) {
     val alarmState = MutableStateFlow<AlarmState>(AlarmState.Idle)
     val alarmController = AlarmController(context.applicationContext, nightRepository, alarmScheduler, alarmState, clock)
     val bedtimeReminders = BedtimeReminderScheduler(context.applicationContext, clock)
+
+    val nightScorer = NightScorer(database)
+
+    /** Call when a night has just been closed (I'm up): scores it in the background. */
+    fun onNightClosed(nightId: Long) {
+        appScope.launch { nightScorer.rescore(nightId) }
+    }
 }
 
 /**

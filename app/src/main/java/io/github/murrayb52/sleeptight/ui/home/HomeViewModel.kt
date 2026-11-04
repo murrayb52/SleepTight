@@ -35,6 +35,7 @@ class HomeViewModel(
     private val tracker: NightTracker,
     private val alarm: AlarmController,
     private val clock: Clock,
+    private val onNightClosed: (Long) -> Unit = {},
 ) : ViewModel() {
 
     /** Ticks on each minute boundary so the "in bed for" time and the 16-hour check stay current. */
@@ -140,6 +141,7 @@ class HomeViewModel(
                 if (closed != null) {
                     tracker.stop()
                     alarm.disarm(closed.id)
+                    onNightClosed(closed.id)
                 }
             } catch (e: IllegalArgumentException) {
                 // Only possible if the phone's clock moved back past the bed tap.
@@ -184,7 +186,10 @@ class HomeViewModel(
             return
         }
         viewModelScope.launch {
-            repository.wakeUp(wake)?.let { alarm.disarm(it.id) }
+            repository.wakeUp(wake)?.let {
+                alarm.disarm(it.id)
+                onNightClosed(it.id)
+            }
             tracker.stop()
         }
     }
@@ -202,6 +207,7 @@ class HomeViewModel(
                     app.container.nightTracker,
                     app.container.alarmController,
                     app.container.clock,
+                    app.container::onNightClosed,
                 )
             }
         }

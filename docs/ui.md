@@ -52,9 +52,9 @@ Shown over the lock screen when the alarm rings.
 
 ## One night
 
-Dates and times, the score dial with time in bed, and the alarm time and snoozes. Then:
-- **How the score adds up**: all five parts with their full points ("– / 35" until the night has a score)
-- sleep stages, once there's sleep data
+Dates and times, then the score dial with time asleep, time to fall asleep and efficiency, the alarm time and snoozes, and where the data came from ("Sleep stages from Garmin" or "Estimated from overnight sound"). Then:
+- **How the score adds up**: each part with its points out of its maximum (scaled up when Deep + REM's points are shared out), the measurement behind it (7 h 29 min, 93 %, 1 wake-up and 1 noise cluster, bed time and snoozes) and a bar. Before a night is scored, parts show "– / 35".
+- **Sleep stages**: a chart from bed to wake. Garmin nights get four rows (awake, REM, light, deep); estimated nights get two (awake, asleep), since there's no stage estimate
 - a noise timeline with the loudest events
 
 **Info icons (ⓘ)** sit next to the score and each part (48 dp touch target, read out as "About Efficiency" and so on). Each opens a short explanation of what's measured and how points are earned. The numbers in it come from `ScoreConfig` and the user's own goals (`ScoreExplainers.kt`), so the text can't drift from the maths.

@@ -9,6 +9,9 @@ import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.data.NightRepository
 import io.github.murrayb52.sleeptight.data.NoiseEvent
 import io.github.murrayb52.sleeptight.data.Settings
+import io.github.murrayb52.sleeptight.data.SleepStageSegment
+import io.github.murrayb52.sleeptight.data.StageSource
+import io.github.murrayb52.sleeptight.scoring.ScoreCache
 import io.github.murrayb52.sleeptight.metrics.Goals
 import io.github.murrayb52.sleeptight.metrics.NightDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,16 +56,29 @@ data class NightDetailUi(
     val events: List<NoiseEvent> = emptyList(),
     val alarmFiredAt: Long? = null,
     val goals: Goals = Goals(),
+    /** The cached score and the measurements behind it; null until the night has been scored. */
+    val score: ScoreCache? = null,
+    val stages: List<SleepStageSegment> = emptyList(),
 )
 
 class NightDetailViewModel(repository: NightRepository, nightId: Long) : ViewModel() {
-    val state: StateFlow<NightDetailUi> = combine(repository.night(nightId), repository.noiseEvents(nightId), repository.settings) { night, events, settings ->
+    val state: StateFlow<NightDetailUi> = combine(
+        repository.night(nightId),
+        repository.noiseEvents(nightId),
+        repository.settings,
+        repository.stageSegments(nightId),
+    ) { night, events, settings, segments ->
+        val score = ScoreCache.decode(night?.scoreJson)
+        // Show the segments the score used: Garmin's if there are any, otherwise the estimate.
+        val source = if (score?.source == "GARMIN") StageSource.GARMIN else StageSource.ESTIMATED
         NightDetailUi(
             loading = false,
             night = night?.toRow(mapOf(nightId to events.size)),
             events = events,
             alarmFiredAt = night?.alarmFiredAt,
             goals = settings.toGoals(),
+            score = score,
+            stages = segments.filter { it.source == source },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NightDetailUi())
 

@@ -4,6 +4,7 @@ import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.data.Night
 import io.github.murrayb52.sleeptight.data.Settings
 import io.github.murrayb52.sleeptight.data.NoiseEvent
+import io.github.murrayb52.sleeptight.scoring.ScoreCache
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import java.time.Duration
 import java.time.Instant
@@ -118,7 +119,7 @@ fun buildHomeUiState(
     val last = lastNight?.wakeTapAt?.let { wake ->
         val bed = Instant.ofEpochMilli(lastNight.bedTapAt)
         val up = Instant.ofEpochMilli(wake)
-        LastNightUi(bed, up, Duration.between(bed, up), lastNight.id, lastNight.snoozeCount)
+        LastNightUi(bed, up, Duration.between(bed, up), lastNight.id, lastNight.snoozeCount, ScoreCache.decode(lastNight.scoreJson)?.total)
     }
     val prompt = open
         ?.takeIf { it.inBedFor >= OPEN_NIGHT_PROMPT_AFTER && it.nightId != promptDismissedForNightId }

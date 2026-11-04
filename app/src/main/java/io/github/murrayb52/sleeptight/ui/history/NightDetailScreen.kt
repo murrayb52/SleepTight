@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.scoring.ScoreCache
 import io.github.murrayb52.sleeptight.metrics.ScoreComponent
 import io.github.murrayb52.sleeptight.ui.components.InfoButton
 import io.github.murrayb52.sleeptight.ui.components.Panel
@@ -84,11 +85,30 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
         }
         if (night == null) return@Column
 
+        val score = state.score
+        val m = score?.metrics
         Panel {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 ScoreDial(night.score, size = 84.dp, stroke = 6.dp, textStyle = MaterialTheme.typography.headlineMedium)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(stringResource(R.string.time_in_bed, formatDuration(night.timeInBed)), style = MaterialTheme.typography.titleMedium)
+                    val asleep = m?.totalSleepMinutes
+                    Text(
+                        if (asleep != null) {
+                            stringResource(R.string.night_asleep, formatDuration(Duration.ofMinutes(asleep)))
+                        } else {
+                            stringResource(R.string.time_in_bed, formatDuration(night.timeInBed))
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (m?.efficiency != null) {
+                        Text(
+                            m.timeToFallAsleepMinutes?.let {
+                                stringResource(R.string.night_onset_efficiency, formatDuration(Duration.ofMinutes(it)), percent(m.efficiency))
+                            } ?: stringResource(R.string.night_efficiency, percent(m.efficiency)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Palette.Muted,
+                        )
+                    }
                     state.alarmFiredAt?.let {
                         Text(
                             stringResource(
@@ -100,9 +120,17 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
                             color = Palette.Muted,
                         )
                     }
-                    if (night.score == null) {
-                        Text(stringResource(R.string.score_pending), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-                    }
+                    Text(
+                        stringResource(
+                            when (score?.source) {
+                                "GARMIN" -> R.string.source_garmin
+                                "ESTIMATED" -> R.string.source_estimated
+                                else -> if (score == null) R.string.score_calculating else R.string.score_no_data
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Palette.Muted,
+                    )
                 }
                 InfoButton(stringResource(R.string.info_score_title), stringResource(R.string.info_score_body), Modifier.testTag("info-score"))
             }
@@ -111,18 +139,41 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
         Panel {
             Text(stringResource(R.string.score_breakdown), style = MaterialTheme.typography.titleSmall)
             ScoreComponent.entries.forEach { c ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(componentName(c), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    // Points appear once the night has a score (step 5); the explanation is always there.
-                    Text(stringResource(R.string.points_of, "–", maxPoints(c)), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                    InfoButton(componentName(c), componentExplainer(c, state.goals), Modifier.testTag("info-${c.name}"))
+                val part = score?.parts?.firstOrNull { it.component == c.name }
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(componentName(c), style = MaterialTheme.typography.bodyLarge)
+                            rawValue(c, score, night)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Muted) }
+                        }
+                        Text(
+                            stringResource(
+                                R.string.points_of_text,
+                                part?.let { Math.round(it.points).toString() } ?: "–",
+                                part?.let { Math.round(it.maxPoints).toString() } ?: maxPoints(c).toString(),
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (part != null) Palette.Text else Palette.Muted,
+                        )
+                        InfoButton(componentName(c), componentExplainer(c, state.goals), Modifier.testTag("info-${c.name}"))
+                    }
+                    if (part != null) {
+                        val fraction = if (part.maxPoints > 0) (part.points / part.maxPoints).toFloat().coerceIn(0f, 1f) else 0f
+                        Canvas(Modifier.fillMaxWidth().padding(end = 48.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Palette.Line)) {
+                            drawRect(Palette.Ember, size = size.copy(width = size.width * fraction))
+                        }
+                    }
                 }
             }
         }
 
         Panel {
             Text(stringResource(R.string.sleep_stages), style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(R.string.sleep_stages_pending), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+            if (state.stages.isEmpty()) {
+                Text(stringResource(R.string.sleep_stages_pending), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+            } else {
+                Hypnogram(state.stages, night, estimated = score?.source != "GARMIN")
+            }
         }
 
         Panel {
@@ -157,5 +208,30 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+private fun percent(x: Double) = Math.round(x * 100).toInt()
+
+/** The measurement behind a score part, shown under its name. */
+@Composable
+private fun rawValue(c: ScoreComponent, score: ScoreCache?, night: NightRowUi): String? {
+    val m = score?.metrics ?: return null
+    if (score.total == null) return null
+    return when (c) {
+        ScoreComponent.DURATION -> m.totalSleepMinutes?.let { formatDuration(Duration.ofMinutes(it)) }
+        ScoreComponent.EFFICIENCY -> m.efficiency?.let { stringResource(R.string.raw_percent, percent(it)) }
+        ScoreComponent.DEEP_REM -> m.deepRemShare?.let { stringResource(R.string.raw_percent, percent(it)) }
+            ?: stringResource(R.string.raw_needs_garmin)
+        ScoreComponent.INTERRUPTIONS -> stringResource(
+            R.string.raw_pair,
+            pluralStringResource(R.plurals.wake_up_count, m.wakeUps ?: 0, m.wakeUps ?: 0),
+            pluralStringResource(R.plurals.cluster_count, m.noiseClusters, m.noiseClusters),
+        )
+        ScoreComponent.REGULARITY -> stringResource(
+            R.string.raw_pair,
+            stringResource(R.string.raw_bed_at, rememberTimeFormatter().format(night.bedTapAt.atZone(night.zone))),
+            pluralStringResource(R.plurals.snooze_count, night.snoozes, night.snoozes),
+        )
     }
 }

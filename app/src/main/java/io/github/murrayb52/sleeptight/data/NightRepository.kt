@@ -39,6 +39,8 @@ class NightRepository(
 
     fun night(id: Long): Flow<Night?> = nights.observe(id)
 
+    fun stageSegments(nightId: Long): Flow<List<SleepStageSegment>> = db.sleepStageSegmentDao().observeForNight(nightId)
+
     suspend fun noiseEventsOnce(nightId: Long): List<NoiseEvent> = db.noiseEventDao().getForNight(nightId)
 
     suspend fun getSettings(): Settings = settingsDao.get() ?: Settings()

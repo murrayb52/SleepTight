@@ -48,6 +48,16 @@ interface NightDao {
     @Query("SELECT * FROM nights WHERE wakeTapAt IS NOT NULL ORDER BY bedTapAt DESC")
     fun observeClosed(): Flow<List<Night>>
 
+    @Query("UPDATE nights SET scoreJson = :json WHERE id = :id")
+    suspend fun setScoreJson(id: Long, json: String?)
+
+    /** Closed nights with no cached score, or one from an older scoring version. */
+    @Query("SELECT id FROM nights WHERE wakeTapAt IS NOT NULL AND (scoreJson IS NULL OR scoreJson NOT LIKE :versionPrefix || '%')")
+    suspend fun closedNightIdsNeedingScore(versionPrefix: String): List<Long>
+
+    @Query("SELECT id FROM nights WHERE wakeTapAt IS NOT NULL")
+    suspend fun closedNightIds(): List<Long>
+
     @Query("UPDATE nights SET alarmWindowStart = :start, alarmWindowEnd = :end WHERE id = :id")
     suspend fun setAlarmWindow(id: Long, start: Long?, end: Long?)
 
@@ -109,6 +119,9 @@ interface SleepStageSegmentDao {
 
     @Query("SELECT * FROM sleep_stage_segments WHERE nightId = :nightId ORDER BY start")
     fun observeForNight(nightId: Long): Flow<List<SleepStageSegment>>
+
+    @Query("DELETE FROM sleep_stage_segments WHERE nightId = :nightId AND source = :source")
+    suspend fun deleteForNight(nightId: Long, source: StageSource)
 }
 
 @Dao

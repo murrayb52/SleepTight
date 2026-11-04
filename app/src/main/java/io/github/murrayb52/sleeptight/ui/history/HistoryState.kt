@@ -4,6 +4,7 @@ import io.github.murrayb52.sleeptight.data.Night
 import io.github.murrayb52.sleeptight.metrics.Goals
 import io.github.murrayb52.sleeptight.metrics.NightDate
 import io.github.murrayb52.sleeptight.metrics.Regularity
+import io.github.murrayb52.sleeptight.scoring.ScoreCache
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -51,7 +52,10 @@ fun Night.toRow(noise: Map<Long, Int>): NightRowUi? {
     val zone = ZoneId.of(zoneId)
     val bed = Instant.ofEpochMilli(bedTapAt)
     val up = Instant.ofEpochMilli(wake)
-    return NightRowUi(id, NightDate.of(bed, zone), bed, up, zone, Duration.between(bed, up), noise[id] ?: 0, snoozeCount)
+    return NightRowUi(
+        id, NightDate.of(bed, zone), bed, up, zone, Duration.between(bed, up), noise[id] ?: 0, snoozeCount,
+        score = ScoreCache.decode(scoreJson)?.total,
+    )
 }
 
 /** Averages over [rows], or null when there are none. */

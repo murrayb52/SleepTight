@@ -130,6 +130,7 @@ class AlarmActivity : ComponentActivity() {
                             val closed = container.nightRepository.wakeUp()
                             container.nightTracker.stop()
                             container.alarmController.disarm(closed?.id)
+                            closed?.let { container.onNightClosed(it.id) }
                         } catch (e: IllegalArgumentException) {
                             // Only if the clock moved back past the bed tap; I'm up on Tonight shows why.
                         }
@@ -154,6 +155,8 @@ data class MorningUi(
     val noiseEvents: Int,
     val snoozes: Int,
     val score: Int? = null,
+    /** True once the closed night has been scored (even if there was no data to score). */
+    val scored: Boolean = false,
 )
 
 fun morningOf(night: Night, noiseEvents: Int) = MorningUi(
@@ -163,6 +166,8 @@ fun morningOf(night: Night, noiseEvents: Int) = MorningUi(
     ZoneId.of(night.zoneId),
     noiseEvents,
     night.snoozeCount,
+    io.github.murrayb52.sleeptight.scoring.ScoreCache.decode(night.scoreJson)?.total,
+    io.github.murrayb52.sleeptight.scoring.ScoreCache.decode(night.scoreJson) != null,
 )
 
 @Composable
@@ -326,9 +331,16 @@ private fun MorningSummary(morning: MorningUi?, onSeeNight: (Long) -> Unit, onDo
                 textStyle = MaterialTheme.typography.displaySmall.copy(color = Palette.DayText),
                 track = Palette.DayText.copy(alpha = 0.12f),
             )
-            if (morning.score == null) {
+            // Still in bed: the score comes after I'm up. Just closed: it takes a moment.
+            val note = when {
+                morning.wakeTapAt == null -> null
+                !morning.scored -> R.string.score_calculating
+                morning.score == null -> R.string.score_no_data
+                else -> null
+            }
+            if (note != null) {
                 Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.score_pending), style = MaterialTheme.typography.bodySmall, color = Palette.DayMuted, textAlign = TextAlign.Center)
+                Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = Palette.DayMuted, textAlign = TextAlign.Center)
             }
             Spacer(Modifier.height(24.dp))
             val inBed = Duration.between(morning.bedTapAt, morning.wakeTapAt ?: Instant.now())

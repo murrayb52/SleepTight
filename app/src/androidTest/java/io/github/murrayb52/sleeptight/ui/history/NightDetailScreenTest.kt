@@ -65,4 +65,30 @@ class NightDetailScreenTest {
         compose.onNodeWithTag("info-score").performClick()
         compose.onNodeWithText("a full circle is 100", substring = true).assertIsDisplayed()
     }
+
+    @Test
+    fun aScoredNightShowsItsPointsAndMeasurements() {
+        val score = io.github.murrayb52.sleeptight.scoring.ScoreCache(
+            total = 78,
+            source = "ESTIMATED",
+            deepRemRedistributed = true,
+            parts = listOf(
+                io.github.murrayb52.sleeptight.scoring.ScoreCache.Part("DURATION", 41.5, 43.75),
+                io.github.murrayb52.sleeptight.scoring.ScoreCache.Part("EFFICIENCY", 26.0, 31.25),
+                io.github.murrayb52.sleeptight.scoring.ScoreCache.Part("INTERRUPTIONS", 7.5, 12.5),
+                io.github.murrayb52.sleeptight.scoring.ScoreCache.Part("REGULARITY", 3.0, 12.5),
+            ),
+            metrics = io.github.murrayb52.sleeptight.scoring.ScoreCache.Metrics(486, 456, 12, 1, 0.92, null, null, null, 2, 1),
+            regularity = io.github.murrayb52.sleeptight.scoring.ScoreCache.Factors(1.0, 1.0, 1.0, null),
+        )
+        compose.setContent {
+            SleepTightTheme { NightDetailScreen(NightDetailUi(loading = false, night = night.copy(score = 78), score = score), onBack = {}) }
+        }
+        compose.onNodeWithText("7 h 36 min asleep").assertIsDisplayed()
+        compose.onNodeWithText("Estimated from overnight sound").assertExists()
+        compose.onNodeWithText("42 / 44").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("92\u00A0%").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Needs Garmin stages", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("1 wake-up, 1 noise cluster").performScrollTo().assertIsDisplayed()
+    }
 }
