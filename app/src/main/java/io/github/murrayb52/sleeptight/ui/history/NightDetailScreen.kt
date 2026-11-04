@@ -15,9 +15,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.health.GarminImporter
 import io.github.murrayb52.sleeptight.scoring.ScoreCache
 import io.github.murrayb52.sleeptight.metrics.ScoreComponent
 import io.github.murrayb52.sleeptight.ui.components.InfoButton
@@ -49,11 +53,11 @@ import java.time.format.DateTimeFormatter
 fun NightDetailRoute(nightId: Long, onBack: () -> Unit) {
     val viewModel: NightDetailViewModel = viewModel(key = "night-$nightId", factory = NightDetailViewModel.factory(nightId))
     val state by viewModel.state.collectAsStateWithLifecycle()
-    NightDetailScreen(state, onBack)
+    NightDetailScreen(state, onBack, onCheckGarmin = viewModel::onCheckGarmin)
 }
 
 @Composable
-fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
+fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: () -> Unit = {}) {
     val time = rememberTimeFormatter()
     val night = state.night
     Column(
@@ -173,6 +177,30 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit) {
                 Text(stringResource(R.string.sleep_stages_pending), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
             } else {
                 Hypnogram(state.stages, night, estimated = score?.source != "GARMIN")
+            }
+            if (state.canCheckGarmin) {
+                OutlinedButton(
+                    onClick = onCheckGarmin,
+                    enabled = !state.checkingGarmin,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Moon),
+                ) {
+                    Text(stringResource(if (state.checkingGarmin) R.string.garmin_checking_night else R.string.garmin_check_night))
+                }
+                state.garminCheck?.let { result ->
+                    Text(
+                        stringResource(
+                            when (result) {
+                                GarminImporter.Result.IMPORTED -> R.string.garmin_check_imported
+                                GarminImporter.Result.NO_DATA -> R.string.garmin_check_no_data
+                                GarminImporter.Result.NOT_CONNECTED -> R.string.garmin_check_not_connected
+                                GarminImporter.Result.FAILED -> R.string.garmin_check_failed
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (result == GarminImporter.Result.IMPORTED) Palette.Good else Palette.Muted,
+                    )
+                }
             }
         }
 

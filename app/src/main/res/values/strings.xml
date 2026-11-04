@@ -248,4 +248,30 @@
     <string name="stage_deep">Deep</string>
     <string name="hypnogram_garmin">Sleep stages through the night, from Garmin</string>
     <string name="hypnogram_estimated">Asleep and awake through the night, estimated from sound</string>
+
+    <!-- Garmin via Health Connect -->
+    <string name="garmin_checking">Checking…</string>
+    <string name="garmin_unavailable">Not available on this phone</string>
+    <string name="garmin_install">Install Health Connect</string>
+    <string name="garmin_connect">Connect</string>
+    <string name="garmin_open_settings">Open Health Connect</string>
+    <string name="garmin_connected">Connected</string>
+    <string name="garmin_note">Garmin Connect writes your sleep stages and heart rate to Health Connect. With access, SleepTight adds deep and REM sleep to your score. Without it, sleep is estimated from overnight sound.</string>
+    <string name="garmin_connected_note">Reads sleep and heart rate written by Garmin Connect only (not Samsung Health or other apps), after your watch syncs.</string>
+    <string name="garmin_denied_note">Health Connect didn\'t allow SleepTight to read sleep and heart rate. Tap Open Health Connect, then allow both under SleepTight. Until then, sleep is estimated from sound.</string>
+    <string name="garmin_check_night">Check for Garmin data</string>
+    <string name="garmin_checking_night">Checking Health Connect…</string>
+    <string name="garmin_check_imported">Garmin data imported. The score now includes deep and REM sleep.</string>
+    <string name="garmin_check_no_data">No Garmin sleep for this night yet. It appears after your watch syncs with Garmin Connect.</string>
+    <string name="garmin_check_not_connected">Garmin isn\'t connected. Connect it in Profile, under Data.</string>
+    <string name="garmin_check_failed">Couldn\'t read Health Connect just now. Try again in a moment.</string>
+
+    <!-- Health Connect: why SleepTight reads health data -->
+    <string name="hc_info_title">SleepTight and your health data</string>
+    <string name="hc_info_reads_title">What it reads</string>
+    <string name="hc_info_reads_body">Sleep sessions (with sleep stages) and heart rate, and only those written by Garmin Connect. It never writes to Health Connect.</string>
+    <string name="hc_info_use_title">What it\'s for</string>
+    <string name="hc_info_use_body">Your sleep stages are trimmed to the times you tapped Going to bed and I\'m up, and used for that night\'s sleep score (deep and REM sleep) and stage chart. Heart rate is stored with the night.</string>
+    <string name="hc_info_private_title">It stays on your phone</string>
+    <string name="hc_info_private_body">SleepTight has no account and no server. Everything it reads is kept on this phone and goes nowhere else. You can remove its access at any time in Health Connect.</string>
 </resources>

@@ -15,6 +15,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Alarm sounds**: the generated chime plus five CC0 Freesound recordings (birdsong, piano, two kalimbas, music box), chosen and previewed in Profile | [alarm.md](alarm.md#sounds) |
 | **Credits in the app**: Profile → About lists every bundled sound and the typeface, with links and the font's licence text | [ui.md](ui.md#profile), [ASSETS.md](../ASSETS.md) |
 | **A sleep score for every night**: from Garmin stages when there are some, otherwise estimated from overnight sound; breakdown with the measurements behind each part and a sleep-stage chart | [metrics.md](metrics.md#scoring-in-the-app), [ui.md](ui.md#one-night) |
+| **Garmin via Health Connect**: sleep stages and heart rate from Garmin Connect only, trimmed to the taps; connect in Profile; retried after syncs; nights without Garmin are estimated from sound | [garmin.md](garmin.md) |
 | **Score explainers**: ⓘ icons on the sleep score and each of its five parts, with numbers taken from `ScoreConfig` and your goals | [ui.md](ui.md#one-night) |
 | **History** (7/30 days, averages, week strip, night list), **one night's page**, **Profile** with goals, alarm and reminder settings | [ui.md](ui.md) |
 | **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
@@ -28,8 +29,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 
 ## Next: v1 build order (remaining)
 
-5. Garmin import via Health Connect, trimmed to the taps, plus a sleep estimate from activity when there's no Garmin data
-6. Morning report (one night: hypnogram, score breakdown, metrics with reference ranges, noise timeline, caffeine at bedtime)
+6. Morning report: the night's page already has the score breakdown, stage chart and noise timeline; still to add are metrics with reference ranges, goal adherence for the night, and caffeine at bedtime (with step 7)
 7. Caffeine log and caffeine at bedtime
 8. Trends and sleep debt
 9. JSON export
@@ -37,7 +37,6 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 
 ## Agreed, not built yet
 
-- **Garmin import via Health Connect** (rest of step 5): stages and heart rate, trimmed to the taps, Garmin origin only.
 - **Opt-in loud-moment playback**: the loudest 5 short clips per night, kept for 7 nights, with a hard size cap. It's the one planned exception to "never store audio". Spec in the [v1 plan's "Later" list](plan/2026-11-04-v1-build-plan.md#later-not-v1-but-design-for-it).
 
 ## Future ideas

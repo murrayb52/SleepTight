@@ -15,7 +15,7 @@ Pages are added as each build step lands:
 | Screens, navigation, look (redesign) | [`ui.md`](ui.md) | after 4 |
 | Overnight sound monitoring and noise events | [`sound-monitoring.md`](sound-monitoring.md) | 3 |
 | Smart alarm, snoozes, `AlarmEvents` hooks | [`alarm.md`](alarm.md) | 4 |
-| Garmin import via Health Connect, fallback estimation | _not yet written_ | 5 |
+| Garmin import via Health Connect, fallback estimation | [`garmin.md`](garmin.md) | 5 |
 | Caffeine log and caffeine at bedtime | _not yet written_ | 7 |
 | Trends and sleep debt | _not yet written_ | 8 |
 | JSON export format | _not yet written_ | 9 |

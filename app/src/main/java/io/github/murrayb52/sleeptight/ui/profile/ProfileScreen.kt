@@ -1,5 +1,8 @@
 package io.github.murrayb52.sleeptight.ui.profile
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,10 +41,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.alarm.AlarmSound
+import io.github.murrayb52.sleeptight.health.HealthConnectGarminSource
+import io.github.murrayb52.sleeptight.health.SourceStatus
 import io.github.murrayb52.sleeptight.ui.components.SectionLabel
 import io.github.murrayb52.sleeptight.ui.history.Tile
 import io.github.murrayb52.sleeptight.ui.home.formatDuration
@@ -55,6 +63,15 @@ private enum class Picker { BEDTIME, SLEEP, SNOOZES, WINDOW, SOUND }
 @Composable
 fun ProfileRoute(onOpenCredits: () -> Unit, viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val askHealthConnect = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        viewModel.onGarminPermissions(it)
+    }
+    // Back from Health Connect (or anywhere else): the connection may have changed.
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshGarmin()
+        onPauseOrDispose {}
+    }
     ProfileScreen(
         state,
         onBedtime = viewModel::onBedtime,
@@ -65,8 +82,28 @@ fun ProfileRoute(onOpenCredits: () -> Unit, viewModel: ProfileViewModel = viewMo
         onBedsideCheck = viewModel::onBedsideCheck,
         onSound = viewModel::onSound,
         onOpenCredits = onOpenCredits,
+        onGarmin = {
+            when (state.garmin.status) {
+                SourceStatus.UPDATE_REQUIRED -> context.startActivity(healthConnectInstallIntent())
+                // After repeated refusals Health Connect stops asking, so send people to its settings instead.
+                SourceStatus.NEEDS_PERMISSION ->
+                    if (state.garmin.denied) {
+                        context.startActivity(HealthConnectClient.getHealthConnectManageDataIntent(context))
+                    } else {
+                        askHealthConnect.launch(HealthConnectGarminSource.PERMISSIONS)
+                    }
+                SourceStatus.READY -> context.startActivity(HealthConnectClient.getHealthConnectManageDataIntent(context))
+                SourceStatus.UNAVAILABLE, null -> Unit
+            }
+        },
     )
 }
+
+/** The Play Store page for Health Connect (needed on Android 13 and earlier, where it's a separate app). */
+private fun healthConnectInstallIntent() = Intent(
+    Intent.ACTION_VIEW,
+    Uri.parse("market://details?id=com.google.android.apps.healthdata&url=healthconnect%3A%2F%2Fonboarding"),
+).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
 @Composable
 fun ProfileScreen(
@@ -79,6 +116,7 @@ fun ProfileScreen(
     onBedsideCheck: (Boolean) -> Unit = {},
     onSound: (String?) -> Unit = {},
     onOpenCredits: () -> Unit = {},
+    onGarmin: () -> Unit = {},
 ) {
     val time = rememberTimeFormatter()
     val s = state.settings
@@ -114,9 +152,35 @@ fun ProfileScreen(
             ToggleRow(stringResource(R.string.bedside_row), s.bedsideCheckEnabled, onBedsideCheck, last = true)
         }
         Section(stringResource(R.string.section_data)) {
-            ValueRow(stringResource(R.string.data_garmin), stringResource(R.string.coming_soon), enabled = false) {}
+            val g = state.garmin
+            ValueRow(
+                stringResource(R.string.data_garmin),
+                stringResource(
+                    when (g.status) {
+                        null -> R.string.garmin_checking
+                        SourceStatus.UNAVAILABLE -> R.string.garmin_unavailable
+                        SourceStatus.UPDATE_REQUIRED -> R.string.garmin_install
+                        SourceStatus.NEEDS_PERMISSION -> if (g.denied) R.string.garmin_open_settings else R.string.garmin_connect
+                        SourceStatus.READY -> R.string.garmin_connected
+                    },
+                ),
+                enabled = g.status != null && g.status != SourceStatus.UNAVAILABLE,
+                onClick = onGarmin,
+            )
             ValueRow(stringResource(R.string.data_export), stringResource(R.string.coming_soon), enabled = false, last = true) {}
         }
+        Text(
+            stringResource(
+                when {
+                    state.garmin.denied && state.garmin.status == SourceStatus.NEEDS_PERMISSION -> R.string.garmin_denied_note
+                    state.garmin.status == SourceStatus.READY -> R.string.garmin_connected_note
+                    else -> R.string.garmin_note
+                },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (state.garmin.denied && state.garmin.status == SourceStatus.NEEDS_PERMISSION) Palette.Poor else Palette.Muted,
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp),
+        )
         Section(stringResource(R.string.section_about)) {
             ValueRow(stringResource(R.string.credits_row), "", last = true, onClick = onOpenCredits)
         }

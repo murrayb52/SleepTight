@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permissions are added by the build step that needs them; Health Connect reads come in step 5. -->
+    <!-- Permissions are added by the build step that needs them. -->
 
     <!-- Step 3: overnight sound levels. Audio is processed in memory only; never stored. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -20,6 +20,15 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Step 5: Garmin data through Health Connect. Read only: sleep and heart rate. -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+
+    <!-- Lets SleepTight see the Health Connect app on Android 13 and earlier, where it's a separate app. -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
 
     <application
         android:name=".SleepTightApplication"
@@ -66,5 +75,26 @@
             android:showWhenLocked="true"
             android:taskAffinity=""
             android:turnScreenOn="true" />
+
+        <!-- Health Connect shows this when you ask why SleepTight wants your sleep and heart rate
+             (Android 13 and earlier: the rationale action; Android 14+: the permission-usage alias). -->
+        <activity
+            android:name=".health.HealthDataInfoActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".health.HealthDataInfoActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
     </application>
 </manifest>

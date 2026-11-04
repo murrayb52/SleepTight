@@ -58,6 +58,13 @@ interface NightDao {
     @Query("SELECT id FROM nights WHERE wakeTapAt IS NOT NULL")
     suspend fun closedNightIds(): List<Long>
 
+    @Query("UPDATE nights SET garminImported = :imported WHERE id = :id")
+    suspend fun setGarminImported(id: Long, imported: Boolean)
+
+    /** Closed nights that ended after [sinceWake] and have no Garmin data yet, newest first. */
+    @Query("SELECT id FROM nights WHERE wakeTapAt IS NOT NULL AND wakeTapAt >= :sinceWake AND garminImported = 0 ORDER BY wakeTapAt DESC")
+    suspend fun closedNightIdsAwaitingGarmin(sinceWake: Long): List<Long>
+
     @Query("UPDATE nights SET alarmWindowStart = :start, alarmWindowEnd = :end WHERE id = :id")
     suspend fun setAlarmWindow(id: Long, start: Long?, end: Long?)
 

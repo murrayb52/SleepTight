@@ -8,10 +8,15 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.data.NightRepository
 import io.github.murrayb52.sleeptight.data.Settings
+import io.github.murrayb52.sleeptight.health.GarminImporter
+import io.github.murrayb52.sleeptight.health.HealthConnectGarminSource
+import io.github.murrayb52.sleeptight.health.SourceStatus
 import io.github.murrayb52.sleeptight.ui.history.Averages
 import io.github.murrayb52.sleeptight.ui.history.averagesOf
 import io.github.murrayb52.sleeptight.ui.history.toGoals
 import io.github.murrayb52.sleeptight.ui.history.toRow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -19,11 +24,25 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 
-data class ProfileUi(val loading: Boolean = true, val settings: Settings = Settings(), val allTime: Averages? = null)
+/** Garmin's connection, as Profile shows it. [denied] is set after the permission request came back without both permissions. */
+data class GarminUi(val status: SourceStatus? = null, val denied: Boolean = false)
 
-class ProfileViewModel(private val repository: NightRepository) : ViewModel() {
-    val state: StateFlow<ProfileUi> = combine(repository.closedNights, repository.noiseCounts, repository.settings) { nights, noise, settings ->
-        ProfileUi(false, settings, averagesOf(nights.mapNotNull { it.toRow(noise) }, settings.toGoals()))
+data class ProfileUi(
+    val loading: Boolean = true,
+    val settings: Settings = Settings(),
+    val allTime: Averages? = null,
+    val garmin: GarminUi = GarminUi(),
+)
+
+class ProfileViewModel(
+    private val repository: NightRepository,
+    private val importer: GarminImporter? = null,
+    private val appScope: CoroutineScope? = null,
+) : ViewModel() {
+    private val garmin = MutableStateFlow(GarminUi())
+
+    val state: StateFlow<ProfileUi> = combine(repository.closedNights, repository.noiseCounts, repository.settings, garmin) { nights, noise, settings, g ->
+        ProfileUi(false, settings, averagesOf(nights.mapNotNull { it.toRow(noise) }, settings.toGoals()), g)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileUi())
 
     private fun update(change: (Settings) -> Settings) {
@@ -38,11 +57,28 @@ class ProfileViewModel(private val repository: NightRepository) : ViewModel() {
     fun onBedsideCheck(on: Boolean) = update { it.copy(bedsideCheckEnabled = on) }
     fun onSound(key: String?) = update { it.copy(alarmSound = key) }
 
+    /** Re-reads Garmin's connection; called whenever Profile comes into view (e.g. back from Health Connect). */
+    fun refreshGarmin() {
+        val importer = importer ?: return
+        viewModelScope.launch { garmin.value = garmin.value.copy(status = importer.status()) }
+    }
+
+    /** The Health Connect permission screen closed with [granted]. Imports recent nights once connected. */
+    fun onGarminPermissions(granted: Set<String>) {
+        val importer = importer ?: return
+        viewModelScope.launch {
+            val ok = granted.containsAll(HealthConnectGarminSource.PERMISSIONS)
+            garmin.value = GarminUi(status = importer.status(), denied = !ok)
+            // Outlives this screen: the import and rescoring can take a few seconds.
+            if (ok) appScope?.launch { importer.importRecent() }
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as SleepTightApplication
-                ProfileViewModel(app.container.nightRepository)
+                ProfileViewModel(app.container.nightRepository, app.container.garminImporter, app.container.appScope)
             }
         }
     }

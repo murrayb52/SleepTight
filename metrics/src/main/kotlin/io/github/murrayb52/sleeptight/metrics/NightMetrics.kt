@@ -36,7 +36,7 @@ data class NightMetrics(
                 return NightMetrics(timeInBed, false, null, null, null, null, null, null, null, null, noise, clusters)
             }
 
-            val segments = trim(input.segments, input.bedTapAt, input.wakeTapAt)
+            val segments = trimToNight(input.segments, input.bedTapAt, input.wakeTapAt)
             val asleep = segments.filter { it.stage != Stage.AWAKE }
             val totalSleep = asleep.fold(Duration.ZERO) { sum, s -> sum + s.length }
             val onset = asleep.firstOrNull()?.start
@@ -64,24 +64,6 @@ data class NightMetrics(
                 noiseEvents = noise,
                 noiseClusters = clusters,
             )
-        }
-
-        /**
-         * Clips segments to [from, to] and removes overlaps (a later segment loses the part that
-         * overlaps an earlier one), so no minute is counted twice.
-         */
-        private fun trim(segments: List<SleepSegment>, from: Instant, to: Instant): List<SleepSegment> {
-            val out = mutableListOf<SleepSegment>()
-            var covered = from
-            for (s in segments.sortedBy { it.start }) {
-                val start = maxOf(s.start, covered)
-                val end = minOf(s.end, to)
-                if (end.isAfter(start)) {
-                    out += s.copy(start = start, end = end)
-                    covered = end
-                }
-            }
-            return out
         }
 
         /**
@@ -117,4 +99,24 @@ data class NightMetrics(
 
         private val SleepSegment.length: Duration get() = Duration.between(start, end)
     }
+}
+
+/**
+ * Trims segments to the night: clips them to [from, to] (the bed and wake taps), drops ones outside,
+ * and removes overlaps (a later segment loses the part an earlier one already covers), so no minute
+ * is counted twice. The result is in time order. Used for every imported segment: the taps define
+ * the night.
+ */
+fun trimToNight(segments: List<SleepSegment>, from: Instant, to: Instant): List<SleepSegment> {
+    val out = mutableListOf<SleepSegment>()
+    var covered = from
+    for (s in segments.sortedBy { it.start }) {
+        val start = maxOf(s.start, covered)
+        val end = minOf(s.end, to)
+        if (end.isAfter(start)) {
+            out += s.copy(start = start, end = end)
+            covered = end
+        }
+    }
+    return out
 }

@@ -7,6 +7,9 @@ import io.github.murrayb52.sleeptight.alarm.AlarmScheduler
 import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.alarm.BedtimeReminderScheduler
 import io.github.murrayb52.sleeptight.data.NightRepository
+import io.github.murrayb52.sleeptight.health.GarminImporter
+import io.github.murrayb52.sleeptight.health.GarminSource
+import io.github.murrayb52.sleeptight.health.HealthConnectGarminSource
 import io.github.murrayb52.sleeptight.scoring.NightScorer
 import io.github.murrayb52.sleeptight.data.RoomRecordingStore
 import io.github.murrayb52.sleeptight.data.SleepTightDatabase
@@ -50,9 +53,18 @@ class AppContainer(context: Context) {
 
     val nightScorer = NightScorer(database)
 
-    /** Call when a night has just been closed (I'm up): scores it in the background. */
+    val garminSource: GarminSource = HealthConnectGarminSource(context.applicationContext)
+    val garminImporter = GarminImporter(database, garminSource, nightScorer, clock)
+
+    /**
+     * Call when a night has just been closed (I'm up): tries Garmin first (it rescores on success),
+     * otherwise scores from the sound estimate straight away. Garmin data that arrives later is
+     * picked up on the next app start or from the night's page.
+     */
     fun onNightClosed(nightId: Long) {
-        appScope.launch { nightScorer.rescore(nightId) }
+        appScope.launch {
+            if (garminImporter.import(nightId) != GarminImporter.Result.IMPORTED) nightScorer.rescore(nightId)
+        }
     }
 }
 
