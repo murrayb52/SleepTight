@@ -27,7 +27,7 @@ Everything fits on one screen without scrolling (checked at the S21's density, 4
 
 ## Bedside check
 
-A sheet at the bed tap: plugged in, on the nightstand next to you, and the mic (bottom edge) pointing towards you. **Don't show this again** turns it off, and it can be turned back on in Profile. **Start the night** carries on with the bed tap and its permission requests.
+A sheet at every bed tap. At the top, three one-line checks: Plugged in; On the nightstand, not under the pillow; Bottom edge (the mic) towards you. **Don't show this again** hides the checks, and Profile turns them back on. Below, **Tonight**: earplugs and context for the [sleep diary](diary.md#at-the-bed-tap-tonight). It all fits without scrolling at 480 dpi. **Start the night** carries on with the bed tap and its permission requests. (Since 2026-11-05 the checks have no explanation lines and no illustration, to make room. The `ic_bedside` drawable is kept but unused.)
 
 ## Tonight (Sleep tab, in bed)
 
@@ -36,6 +36,7 @@ Near-black sky with twinkling stars and no nav bar. From the top:
 - a big clock
 - in bed since / how long
 - the alarm row (tap to turn tonight's alarm off or on; while ringing, **Snooze**). The press-and-hold I'm up below stops a ringing or snoozed alarm and ends the night
+- **Note a waking**, a quiet link under I'm up's hint, opens the [wake note](diary.md#in-the-night-wake-notes)
 - the noise panel: a strip from the bed tap to now with a tick per event, and the latest events
 - a gentle wave whose height follows the live level: the service publishes a display level every **100 ms** (the stored level stays once a second), the height eases towards it over 300 ms and the wave flows continuously, so it moves smoothly rather than jumping each second
 
@@ -70,6 +71,6 @@ Dates and times, then the score dial with time asleep, time to fall asleep and e
 All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings:
 - **Goals**: bedtime (clock picker), sleep (a slider, 5–10 h in 1-hour notches), snoozes (a slider, at most 0–5). Sliders save when you let go
 - **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds))
-- **Reminders**: bedtime reminder and bedside check switches
+- **Reminders**: bedtime reminder, bedside check and **Earplugs in by default** switches
 - **Data**: Garmin and export, both coming soon
 - **About**: **Credits and licences**, a page crediting each alarm sound (original title, author, CC0, a link to Freesound) and the Outfit typeface (with its full SIL Open Font License text), and noting that the bedside illustration was made for the app

@@ -83,6 +83,10 @@ import io.github.murrayb52.sleeptight.ui.components.ScoreDial
 import io.github.murrayb52.sleeptight.ui.components.StandardPickerType
 import io.github.murrayb52.sleeptight.ui.components.StarrySky
 import io.github.murrayb52.sleeptight.ui.components.WheelPicker
+import io.github.murrayb52.sleeptight.SleepTightApplication
+import io.github.murrayb52.sleeptight.ui.diary.CaffeineContent
+import io.github.murrayb52.sleeptight.ui.diary.DiarySheet
+import io.github.murrayb52.sleeptight.ui.diary.TonightAnswers
 import io.github.murrayb52.sleeptight.ui.theme.Palette
 import java.time.Duration
 import java.time.Instant
@@ -108,6 +112,8 @@ data class HomeActions(
     val onAllowExactAlarms: () -> Unit = {},
     val onAllowFullScreen: () -> Unit = {},
     val onWakeByChanged: (LocalTime) -> Unit = {},
+    val onOpenCaffeine: () -> Unit = {},
+    val onNoteWaking: () -> Unit = {},
 )
 
 @Composable
@@ -118,6 +124,10 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
     val activity = LocalActivity.current
     var device by remember { mutableStateOf(readDeviceState(context)) }
     var showBedsideCheck by rememberSaveable { mutableStateOf(false) }
+    var showCaffeine by rememberSaveable { mutableStateOf(false) }
+    // Tonight's answers wait here while the permission dialog is up.
+    var pendingAnswers by remember { mutableStateOf<TonightAnswers?>(null) }
+    val container = (context.applicationContext as SleepTightApplication).container
 
     // Re-read permissions and battery state every time the app comes back, e.g. from Settings.
     LifecycleResumeEffect(Unit) {
@@ -129,7 +139,7 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
     val bedPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         device = readDeviceState(context)
         // The night starts either way: taps define it. Without the mic it just has no sound data.
-        viewModel.onGoingToBed(trackSound = device.micGranted)
+        viewModel.onGoingToBed(trackSound = device.micGranted, answers = pendingAnswers)
     }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         device = readDeviceState(context)
@@ -144,7 +154,7 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
                 else -> device.notificationsGranted
             }
         }
-        if (missing.isEmpty()) viewModel.onGoingToBed(trackSound = true) else bedPermissions.launch(missing.toTypedArray())
+        if (missing.isEmpty()) viewModel.onGoingToBed(trackSound = true, answers = pendingAnswers) else bedPermissions.launch(missing.toTypedArray())
     }
 
     HomeScreen(
@@ -152,7 +162,7 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
         device = device,
         message = message,
         actions = HomeActions(
-            onGoingToBed = { if (state.goals.bedsideCheckEnabled) showBedsideCheck = true else startNight() },
+            onGoingToBed = { showBedsideCheck = true },
             onImUp = viewModel::onImUp,
             onKeepNightOpen = viewModel::onKeepNightOpen,
             onCloseNightAt = viewModel::onCloseNightAt,
@@ -173,14 +183,32 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
             onAllowExactAlarms = { context.startActivity(exactAlarmSettingsIntent(context)) },
             onAllowFullScreen = { context.startActivity(fullScreenSettingsIntent(context)) },
             onWakeByChanged = viewModel::onWakeByChanged,
+            onOpenCaffeine = { showCaffeine = true },
+            onNoteWaking = { container.wakePromptAt.value = container.clock.millis() },
         ),
     )
 
+    if (showCaffeine) {
+        DiarySheet(onDismiss = { showCaffeine = false }) {
+            CaffeineContent(
+                recent = state.caffeine.recent,
+                settings = state.settings,
+                zone = state.zone,
+                now = { container.clock.instant() },
+                onAdd = viewModel::onAddCaffeine,
+                onDelete = viewModel::onDeleteCaffeine,
+            )
+        }
+    }
+
     if (showBedsideCheck) {
         BedsideCheckSheet(
-            onStart = { dontShowAgain ->
+            showChecks = state.goals.bedsideCheckEnabled,
+            earplugsDefault = state.goals.earplugsDefault,
+            onStart = { dontShowAgain, answers ->
                 showBedsideCheck = false
                 if (dontShowAgain) viewModel.onBedsideCheckDontShow()
+                pendingAnswers = answers
                 startNight()
             },
             onDismiss = { showBedsideCheck = false },
@@ -276,6 +304,24 @@ private fun SleepContent(state: HomeUiState, device: DeviceState, actions: HomeA
                 color = Palette.Muted,
                 textAlign = TextAlign.End,
             )
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClickLabel = stringResource(R.string.caffeine_add), onClick = actions.onOpenCaffeine)
+                .heightIn(min = 40.dp)
+                .testTag("caffeineRow"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val mg = Math.round(state.caffeine.byBedtimeMg).toInt()
+            Text(
+                if (state.caffeine.recent.isEmpty() && mg == 0) stringResource(R.string.caffeine_none) else stringResource(R.string.caffeine_by_bedtime, mg),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Palette.TextSoft,
+                modifier = Modifier.weight(1f),
+            )
+            Text(stringResource(R.string.add_short), style = MaterialTheme.typography.labelLarge, color = Palette.Ember)
         }
     }
 
@@ -459,6 +505,9 @@ private fun TonightContent(state: HomeUiState, device: DeviceState, actions: Hom
         )
         Spacer(Modifier.height(8.dp))
         CentredText(stringResource(R.string.hold_hint), MaterialTheme.typography.bodySmall, contentWidth, Color(0xFF8790B0))
+        TextButton(onClick = actions.onNoteWaking, modifier = Modifier.heightIn(min = 48.dp).testTag("noteWaking")) {
+            Text(stringResource(R.string.note_waking), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+        }
     }
 }
 

@@ -112,4 +112,29 @@ class MigrationTest {
             db.execSQL("INSERT INTO screen_events (nightId, timestamp, type) VALUES (6, 1500, 'UNLOCKED')")
         }
     }
+
+    @Test
+    fun version5To6AddsTheDiaryAndEarplugsDefaultOn() {
+        helper.createDatabase(dbName, 5).use { db ->
+            db.execSQL("INSERT INTO nights (id, bedTapAt, wakeTapAt, zoneId, snoozeCount, garminImported) VALUES (6, 1000, 2000, 'Africa/Johannesburg', 0, 0)")
+            db.execSQL(
+                "INSERT INTO settings (id, targetBedtimeMinutes, targetSleepMinutes, maxSnoozes, alarmEnabled, " +
+                    "bedtimeReminderEnabled, bedsideCheckEnabled, alarmWindowStartMinutes, alarmWindowEndMinutes, snoozeMinutes, alarmSound, " +
+                    "espressoHomeMg, espressoRestaurantMg, decafShotMg, colaMgPer100Ml, caffeineHalfLifeHours) " +
+                    "VALUES (0, 1320, 480, 1, 1, 1, 1, 345, 375, 9, NULL, 63, 75, 3, 10, 5)",
+            )
+        }
+        helper.runMigrationsAndValidate(dbName, 6, true).use { db ->
+            db.query("SELECT earplugsDefault FROM settings").use { c ->
+                c.moveToFirst()
+                assertEquals(1, c.getInt(0))
+            }
+            db.execSQL("INSERT INTO night_context (nightId, earplugs, alcohol, partner, differentBed, readingBeforeBed, lastScreens) VALUES (6, 1, 0, 0, 0, 1, 'UNDER_1H')")
+            db.execSQL("INSERT INTO wake_notes (nightId, at, notedAt, reasons, note) VALUES (6, 1500, 1520, 'TOILET,WATER', NULL)")
+            db.execSQL(
+                "INSERT INTO morning_surveys (nightId, answeredAt, rested, quality, wakings, minutesToFallAsleep, minutesBeforeTrying, " +
+                    "earplugAdjustments, notes) VALUES (6, 2100, 7, 6, 2, 15, 10, 1, NULL)",
+            )
+        }
+    }
 }

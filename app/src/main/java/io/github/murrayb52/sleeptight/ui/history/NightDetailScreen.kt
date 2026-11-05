@@ -38,6 +38,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import io.github.murrayb52.sleeptight.SleepTightApplication
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -64,11 +66,24 @@ import java.time.format.DateTimeFormatter
 fun NightDetailRoute(nightId: Long, onBack: () -> Unit) {
     val viewModel: NightDetailViewModel = viewModel(key = "night-$nightId", factory = NightDetailViewModel.factory(nightId))
     val state by viewModel.state.collectAsStateWithLifecycle()
-    NightDetailScreen(state, onBack, onCheckGarmin = viewModel::onCheckGarmin, onDelete = { viewModel.onDelete(onBack) })
+    val container = (LocalContext.current.applicationContext as SleepTightApplication).container
+    NightDetailScreen(
+        state,
+        onBack,
+        onCheckGarmin = viewModel::onCheckGarmin,
+        onDelete = { viewModel.onDelete(onBack) },
+        onAnswerSurvey = { container.surveyRequested.value = nightId },
+    )
 }
 
 @Composable
-fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: () -> Unit = {}, onDelete: () -> Unit = {}) {
+fun NightDetailScreen(
+    state: NightDetailUi,
+    onBack: () -> Unit,
+    onCheckGarmin: () -> Unit = {},
+    onDelete: () -> Unit = {},
+    onAnswerSurvey: () -> Unit = {},
+) {
     var confirmingDelete by rememberSaveable { mutableStateOf(false) }
     if (confirmingDelete) {
         AlertDialog(
@@ -266,6 +281,8 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: (
                 }
             }
         }
+
+        DiaryPanel(state.diary, night.zone, onAnswerSurvey)
 
         TextButton(onClick = { confirmingDelete = true }, modifier = Modifier.heightIn(min = 48.dp).testTag("deleteNight")) {
             Text(stringResource(R.string.delete_night), color = Palette.Poor)

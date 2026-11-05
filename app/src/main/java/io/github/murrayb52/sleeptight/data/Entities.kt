@@ -144,6 +144,83 @@ data class CaffeineEntry(
     val mg: Double,
 )
 
+// ---- The sleep diary (database version 6, 2026-11-05): labels and context for the sound model.
+
+/** When the last 30+ minutes of screen time ended, before the bed tap. */
+enum class LastScreens { JUST_NOW, UNDER_1H, H1_TO_2, OVER_2H }
+
+/** What was true at the bed tap, from the "Tonight" sheet. One row per night. */
+@Entity(
+    tableName = "night_context",
+    foreignKeys = [
+        ForeignKey(entity = Night::class, parentColumns = ["id"], childColumns = ["nightId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class NightContext(
+    @PrimaryKey val nightId: Long,
+    val earplugs: Boolean,
+    val alcohol: Boolean = false,
+    val partner: Boolean = false,
+    val differentBed: Boolean = false,
+    val readingBeforeBed: Boolean = false,
+    val lastScreens: LastScreens? = null,
+)
+
+/** Why you woke, picked on the wake note. */
+enum class WakeReason { TOILET, WATER, NOISE, TOO_HOT, TOO_COLD, MIND_RACING, EARPLUGS, CHECKING_TIME, OTHER }
+
+/**
+ * A waking you noted during the night. [at] is the screen-on that prompted it (or the moment you
+ * opened the note yourself), [notedAt] when you saved it.
+ */
+@Entity(
+    tableName = "wake_notes",
+    indices = [Index("nightId")],
+    foreignKeys = [
+        ForeignKey(entity = Night::class, parentColumns = ["id"], childColumns = ["nightId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class WakeNote(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val nightId: Long,
+    val at: Long,
+    val notedAt: Long,
+    /** Comma-separated [WakeReason] names; see [reasonList]. */
+    val reasons: String,
+    val note: String? = null,
+) {
+    val reasonList: List<WakeReason>
+        get() = reasons.split(',').mapNotNull { name -> WakeReason.entries.firstOrNull { it.name == name.trim() } }
+
+    companion object {
+        fun encode(reasons: Collection<WakeReason>) = reasons.sortedBy { it.ordinal }.joinToString(",") { it.name }
+    }
+}
+
+/** "How did you sleep?", answered after I'm up. One row per night. */
+@Entity(
+    tableName = "morning_surveys",
+    foreignKeys = [
+        ForeignKey(entity = Night::class, parentColumns = ["id"], childColumns = ["nightId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class MorningSurvey(
+    @PrimaryKey val nightId: Long,
+    val answeredAt: Long,
+    /** 1–10. */
+    val rested: Int,
+    /** 1–10. */
+    val quality: Int,
+    /** How many times you think you woke. */
+    val wakings: Int,
+    val minutesToFallAsleep: Int,
+    /** In bed before trying to sleep (reading, phone…). */
+    val minutesBeforeTrying: Int,
+    /** Only asked on earplug nights. */
+    val earplugAdjustments: Int? = null,
+    val notes: String? = null,
+)
+
 /**
  * User settings, stored as a single row (id 0). The defaults here are the app's defaults.
  * Times of day are minutes after local midnight.
@@ -160,6 +237,8 @@ data class Settings(
     @ColumnInfo(defaultValue = "1") val bedtimeReminderEnabled: Boolean = true,
     /** The bedside check (charger, nightstand, mic) at the bed tap. Added in schema version 4. */
     @ColumnInfo(defaultValue = "1") val bedsideCheckEnabled: Boolean = true,
+    /** Whether "Earplugs in" starts switched on at the bed tap. Added in schema version 6. */
+    @ColumnInfo(defaultValue = "1") val earplugsDefault: Boolean = true,
     val alarmWindowStartMinutes: Int = 5 * 60 + 45,
     val alarmWindowEndMinutes: Int = 6 * 60 + 15,
     /** Unused since 2026-11-04: snooze lengths are fixed (see SnoozeLadder). Kept so old data reads. */

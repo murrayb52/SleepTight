@@ -1,6 +1,5 @@
 package io.github.murrayb52.sleeptight.ui.home
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,20 +33,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.data.LastScreens
+import io.github.murrayb52.sleeptight.ui.diary.TonightAnswers
+import io.github.murrayb52.sleeptight.ui.diary.TonightQuestions
+import androidx.compose.runtime.saveable.Saver
 import io.github.murrayb52.sleeptight.ui.theme.Palette
 
 /**
- * Shown at the bed tap (unless turned off): plug in the charger, put the phone on the nightstand
- * next to you, and point the mic end towards you. "Start the night" carries on with the bed tap.
+ * Shown at every bed tap: the bedside checks (unless turned off: plug in the charger, put the phone
+ * on the nightstand next to you, point the mic end towards you), then tonight's diary questions
+ * (earplugs and context). "Start the night" carries on with the bed tap.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BedsideCheckSheet(onStart: (dontShowAgain: Boolean) -> Unit, onDismiss: () -> Unit) {
+fun BedsideCheckSheet(
+    showChecks: Boolean,
+    earplugsDefault: Boolean,
+    onStart: (dontShowAgain: Boolean, answers: TonightAnswers) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -55,13 +63,18 @@ fun BedsideCheckSheet(onStart: (dontShowAgain: Boolean) -> Unit, onDismiss: () -
         containerColor = Color(0xFF10173A),
         contentColor = Palette.Text,
     ) {
-        BedsideCheckContent(onStart)
+        BedsideCheckContent(showChecks, earplugsDefault, onStart)
     }
 }
 
 @Composable
-fun BedsideCheckContent(onStart: (dontShowAgain: Boolean) -> Unit) {
+fun BedsideCheckContent(
+    showChecks: Boolean,
+    earplugsDefault: Boolean,
+    onStart: (dontShowAgain: Boolean, answers: TonightAnswers) -> Unit,
+) {
     var dontShow by rememberSaveable { mutableStateOf(false) }
+    var answers by rememberSaveable(stateSaver = TonightAnswersSaver) { mutableStateOf(TonightAnswers(earplugs = earplugsDefault)) }
     Column(
         Modifier
             .fillMaxWidth()
@@ -71,31 +84,34 @@ fun BedsideCheckContent(onStart: (dontShowAgain: Boolean) -> Unit) {
             .padding(bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(stringResource(R.string.bedside_title), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(12.dp))
-        Image(painterResource(R.drawable.ic_bedside), contentDescription = null, modifier = Modifier.size(width = 240.dp, height = 194.dp))
-        Spacer(Modifier.height(16.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            CheckItem(R.string.bedside_charger_title, R.string.bedside_charger_body, Palette.Ember)
-            CheckItem(R.string.bedside_nightstand_title, R.string.bedside_nightstand_body, Palette.Moon)
-            CheckItem(R.string.bedside_mic_title, R.string.bedside_mic_body, Palette.Moon)
+        if (showChecks) {
+            Text(stringResource(R.string.bedside_title), style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                CheckItem(R.string.bedside_charger_title, Palette.Ember)
+                CheckItem(R.string.bedside_nightstand_title, Palette.Moon)
+                CheckItem(R.string.bedside_mic_title, Palette.Moon)
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .toggleable(value = dontShow, role = Role.Checkbox, onValueChange = { dontShow = it }),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Checkbox(checked = dontShow, onCheckedChange = null, colors = CheckboxDefaults.colors(checkedColor = Palette.Ember, checkmarkColor = Palette.OnEmber))
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(R.string.bedside_dont_show), style = MaterialTheme.typography.bodyMedium, color = Palette.TextSoft)
+            }
+            Spacer(Modifier.height(8.dp))
         }
-        Spacer(Modifier.height(12.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .toggleable(value = dontShow, role = Role.Checkbox, onValueChange = { dontShow = it }),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Checkbox(checked = dontShow, onCheckedChange = null, colors = CheckboxDefaults.colors(checkedColor = Palette.Ember, checkmarkColor = Palette.OnEmber))
-            Spacer(Modifier.size(8.dp))
-            Text(stringResource(R.string.bedside_dont_show), style = MaterialTheme.typography.bodyMedium, color = Palette.TextSoft)
-        }
+        Text(stringResource(R.string.tonight_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(4.dp))
+        TonightQuestions(answers) { answers = it }
         Spacer(Modifier.height(8.dp))
         Button(
-            onClick = { onStart(dontShow) },
+            onClick = { onStart(dontShow, answers) },
             modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
             shape = RoundedCornerShape(30.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Palette.Ember, contentColor = Palette.OnEmber),
@@ -103,20 +119,37 @@ fun BedsideCheckContent(onStart: (dontShowAgain: Boolean) -> Unit) {
     }
 }
 
+/**
+ * One check as a single line, so the checks and tonight's questions fit on one screen (the longer
+ * explanations were dropped on 2026-11-05 to make room; they're in docs/ui.md).
+ */
 @Composable
-private fun CheckItem(title: Int, body: Int, dot: Color) {
+private fun CheckItem(title: Int, dot: Color) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(Palette.Sky)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Spacer(Modifier.padding(top = 7.dp).size(10.dp).clip(RoundedCornerShape(5.dp)).background(dot))
-        Column {
-            Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-        }
+        Spacer(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(dot))
+        Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
     }
 }
+
+/** Keeps the answers across rotation: a list of the flags plus the screens choice. */
+private val TonightAnswersSaver = Saver<TonightAnswers, List<Any?>>(
+    save = { listOf(it.earplugs, it.alcohol, it.partner, it.differentBed, it.readingBeforeBed, it.lastScreens?.name) },
+    restore = {
+        TonightAnswers(
+            earplugs = it[0] as Boolean,
+            alcohol = it[1] as Boolean,
+            partner = it[2] as Boolean,
+            differentBed = it[3] as Boolean,
+            readingBeforeBed = it[4] as Boolean,
+            lastScreens = (it[5] as String?)?.let(LastScreens::valueOf),
+        )
+    },
+)

@@ -105,11 +105,8 @@
     <!-- Bedside check -->
     <string name="bedside_title">Before you sleep</string>
     <string name="bedside_charger_title">Plugged in</string>
-    <string name="bedside_charger_body">Listening runs all night, so keep the charger connected.</string>
-    <string name="bedside_nightstand_title">On the nightstand, next to you</string>
-    <string name="bedside_nightstand_body">Within arm\'s reach, not under the pillow.</string>
-    <string name="bedside_mic_title">Mic pointing towards you</string>
-    <string name="bedside_mic_body">The mic is in the bottom edge: turn that end towards your pillow.</string>
+    <string name="bedside_nightstand_title">On the nightstand, not under the pillow</string>
+    <string name="bedside_mic_title">Bottom edge (the mic) towards you</string>
     <string name="bedside_dont_show">Don\'t show this again</string>
     <string name="bedside_start">Start the night</string>
 
@@ -303,4 +300,82 @@
     <string name="delete_night_body">Its sound levels, noise events, sleep stages, heart rate and score are deleted too. This can\'t be undone.</string>
     <string name="delete">Delete</string>
     <string name="night_too_short">That was under 5 minutes, so it wasn\'t kept as a night.</string>
+
+    <!-- The sleep diary (2026-11-05) -->
+    <string name="tonight_title">Tonight</string>
+    <string name="earplugs_in">Earplugs in</string>
+    <string name="tag_alcohol">Alcohol</string>
+    <string name="tag_partner">Partner in the room</string>
+    <string name="tag_different_bed">Different bed</string>
+    <string name="tag_reading">Reading before bed</string>
+    <string name="last_screens_title">Last 30+ min of screens ended</string>
+    <string name="screens_just_now">Just now</string>
+    <string name="screens_under_1h">Under 1 h ago</string>
+    <string name="screens_1_2h">1–2 h ago</string>
+    <string name="screens_over_2h">2 h+ ago</string>
+    <string name="earplugs_default_row">Earplugs in by default</string>
+
+    <string name="channel_night_notes">Night notes</string>
+    <string name="channel_night_notes_description">A silent prompt to note why you woke, when you pick up the phone at night</string>
+    <string name="wake_prompt_title">Awake?</string>
+    <string name="wake_prompt_text">Tap to note why you woke</string>
+    <string name="wake_note_title">Awake at %1$s. Why?</string>
+    <string name="wake_note_hint">A short note (optional)</string>
+    <string name="not_now">Not now</string>
+    <string name="note_waking">Note a waking</string>
+    <string name="reason_toilet">Toilet</string>
+    <string name="reason_water">Water</string>
+    <string name="reason_noise">Noise</string>
+    <string name="reason_too_hot">Too hot</string>
+    <string name="reason_too_cold">Too cold</string>
+    <string name="reason_mind_racing">Mind racing</string>
+    <string name="reason_earplugs">Earplugs</string>
+    <string name="reason_checking_time">Checking the time</string>
+    <string name="reason_other">Other</string>
+
+    <string name="survey_title">How did you sleep?</string>
+    <string name="survey_rested">How rested do you feel?</string>
+    <string name="survey_quality">Sleep quality</string>
+    <string name="survey_wakings">Times you think you woke</string>
+    <string name="survey_to_sleep">Time to fall asleep</string>
+    <string name="survey_before_trying">In bed before trying to sleep</string>
+    <string name="survey_earplug_adjustments">Earplug adjustments</string>
+    <string name="survey_notes">Notes (optional)</string>
+    <string name="survey_later">Later</string>
+    <string name="minutes_value">%1$d min</string>
+    <string name="minutes_value_max">%1$d+ min</string>
+    <string name="out_of_ten">%1$d / 10</string>
+    <string name="decrease">Less</string>
+    <string name="increase">More</string>
+
+    <string name="caffeine_by_bedtime">Caffeine by bedtime ≈ %1$d mg</string>
+    <string name="caffeine_none">No caffeine logged today</string>
+    <string name="caffeine_add">Add caffeine</string>
+    <string name="add_short">+ Add</string>
+    <string name="caffeine_title">Caffeine</string>
+    <string name="caffeine_last_day">Last 24 hours</string>
+    <string name="drink_coffee">Coffee</string>
+    <string name="drink_decaf">Decaf</string>
+    <string name="drink_coke">Coke</string>
+    <string name="drink_coke_zero">Coke Zero</string>
+    <string name="venue_home">Home</string>
+    <string name="venue_restaurant">Restaurant</string>
+    <string name="shots_single">Single</string>
+    <string name="shots_double">Double</string>
+    <string name="size_ml">%1$d ml</string>
+    <string name="size_litre">1 L</string>
+    <string name="when_now">Now</string>
+    <string name="hours_ago">%1$d h ago</string>
+    <string name="caffeine_add_mg">Add · %1$d mg</string>
+    <string name="caffeine_entry_mg">%1$d mg</string>
+
+    <string name="diary_title">Diary</string>
+    <string name="diary_earplugs_yes">Earplugs in</string>
+    <string name="diary_earplugs_no">No earplugs</string>
+    <string name="diary_no_context">Nothing noted at bedtime</string>
+    <string name="diary_screens">Screens ended: %1$s</string>
+    <string name="diary_wakings_none">No wakings noted in the night</string>
+    <string name="diary_survey_line">Rested %1$d/10 · quality %2$d/10 · woke %3$d× · %4$d min to fall asleep · %5$d min in bed first</string>
+    <string name="diary_earplug_adjustments">Earplug adjustments: %1$d</string>
+    <string name="diary_caffeine">Caffeine at bedtime ≈ %1$d mg</string>
 </resources>

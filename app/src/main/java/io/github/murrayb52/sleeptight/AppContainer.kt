@@ -7,6 +7,9 @@ import io.github.murrayb52.sleeptight.alarm.AlarmScheduler
 import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.alarm.BedtimeReminderScheduler
 import io.github.murrayb52.sleeptight.data.Night
+import io.github.murrayb52.sleeptight.data.isOpen
+import io.github.murrayb52.sleeptight.diary.WakePromptRule
+import io.github.murrayb52.sleeptight.tracking.Notifications
 import io.github.murrayb52.sleeptight.data.NightRepository
 import io.github.murrayb52.sleeptight.health.GarminImporter
 import io.github.murrayb52.sleeptight.health.GarminSource
@@ -30,6 +33,7 @@ import java.time.ZoneId
 
 /** Manual dependency wiring: one instance per process, created by [SleepTightApplication]. */
 class AppContainer(context: Context) {
+    private val appContext: Context = context.applicationContext
     val clock: Clock = DeviceClock
     val database: SleepTightDatabase = SleepTightDatabase.create(context)
     val nightRepository = NightRepository(database, clock)
@@ -59,6 +63,30 @@ class AppContainer(context: Context) {
 
     /** Nights Garmin rewrote since they were imported, shown as a swipe-away note until dismissed. */
     val garminUpdates = MutableStateFlow<List<GarminImporter.Update>>(emptyList())
+
+    /**
+     * The screen-on time a wake note is waiting for, or null. Set when the screen turns on in the
+     * night (see [WakePromptRule]) or from "Note a waking"; the app shows the note sheet while set.
+     */
+    val wakePromptAt = MutableStateFlow<Long?>(null)
+    private var lastWakePromptAt = 0L
+
+    /** Called by NightService whenever the screen turns on during a tracked night. */
+    fun onScreenOnInNight(nightId: Long, at: Long) {
+        appScope.launch {
+            val night = nightRepository.getNight(nightId)?.takeIf { it.isOpen } ?: return@launch
+            if (!WakePromptRule.shouldPrompt(at, night.bedTapAt, alarmState.value == AlarmState.Idle, lastWakePromptAt)) return@launch
+            lastWakePromptAt = at
+            wakePromptAt.value = at
+            Notifications.showWakePrompt(appContext)
+        }
+    }
+
+    /** Nights whose morning survey was put off with "Later" in this run of the app. */
+    val surveyPutOff = MutableStateFlow<Set<Long>>(emptySet())
+
+    /** A night whose survey was asked for from its page, shown even if it's old or was put off. */
+    val surveyRequested = MutableStateFlow<Long?>(null)
 
     /**
      * Call when a night has just been closed (I'm up): tries Garmin first (it rescores on success),

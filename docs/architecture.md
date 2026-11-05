@@ -36,7 +36,7 @@ flowchart LR
 | Module | What it is | Depends on | Status |
 |---|---|---|---|
 | `:app` | The Android app: UI, storage, services, alarm, Health Connect, export | `:metrics`, AndroidX | Scaffold only |
-| `:metrics` | Pure Kotlin/JVM maths: night metrics, sleep score, regularity, caffeine at bedtime, sleep debt | Kotlin stdlib only | Night metrics, score, regularity, `NightDate` (step 2); sound levels, baseline, noise events, activity (step 3); wake window, smart trigger, volume ramp (step 4). Caffeine and sleep debt planned (steps 7–8) |
+| `:metrics` | Pure Kotlin/JVM maths: night metrics, sleep score, regularity, caffeine at bedtime, sleep debt | Kotlin stdlib only | Night metrics, score, regularity, `NightDate` (step 2); sound levels, baseline, noise events, activity (step 3); wake window, smart trigger, volume ramp (step 4); caffeine decay `caffeineAt` (step 7). Sleep debt planned (step 8) |
 
 `:metrics` is kept separate so the build itself enforces "no Android here". That makes every number the app shows testable with fast JVM unit tests on synthetic nights, without an emulator. `:app` converts Room entities into `:metrics` input types and stores the results.
 
@@ -44,13 +44,13 @@ flowchart LR
 
 | Package | Component | Responsibility | Status |
 |---|---|---|---|
-| `data` | Room entities, DAOs, `NightRepository` | The single place that reads and writes data. Exposes `Flow`s to the UI. Version 5 adds measured sound columns and `screen_events` for the sound-model investigation | Built (step 1) |
+| `data` | Room entities, DAOs, `NightRepository` | The single place that reads and writes data. Exposes `Flow`s to the UI. Version 5 adds measured sound columns and `screen_events` for the sound-model investigation; version 6 adds the sleep diary (`night_context`, `wake_notes`, `morning_surveys`) and `Settings.earplugsDefault` | Built (step 1) |
 | `scoring` | `scoreNight`, `NightScorer`, `ScoreCache` | Scores closed nights from stored data (Garmin segments or the sound estimate) and caches the result in `Night.scoreJson`; reruns after I'm up, on app start and when goals change | Built (step 5) |
 | `ui` | Screens + ViewModels | Sleep (and Tonight), History, one night, Profile (settings), shared components (stars, sunrise, score dial, wheel, hold button). Screens are stateless, and ViewModels hold state | Redesigned: Sleep tab (with Tonight as its in-bed state), History, one night, Profile, bottom nav, alarm screen with sunrise and morning summary; see [ui.md](ui.md) |
 | `tracking` | `NightService` | Foreground service (`microphone` type). Reads `AudioRecord`, computes dB per second, keeps a rolling baseline, detects noise events, and batches writes. Never stores audio. Started and stopped through `NightTracker`; reports live state as `TrackingStatus`; noise hook `NoiseEvents` | Built (step 3) |
 | `alarm` | `AlarmController`, `AlarmScheduler`, `AlarmReceiver`, `AlarmRingService`, `AlarmActivity`, `AlarmEvents` | Arms the window at the bed tap and re-arms after reboots, rings with `setAlarmClock` (the smart trigger in `NightService` can bring it forward), plays the chosen sound (`AlarmPlayer`: a bundled CC0 recording, with a generated chime only if the file fails) with a volume ramp and no vibration, counts snoozes on a shrinking ladder capped at 5; `BedtimeReminderScheduler` sends the reminder 30 min before the bedtime goal | Built (step 4), with four bundled sounds and a picker in Profile; I'm up on the alarm ends the night |
 | `health` | `GarminImporter`, `HealthConnectGarminSource` behind `GarminSource` | Reads Garmin-only sleep stages and heart rate from Health Connect, trims them to the taps, stores them and rescores; retried after I'm up, on app start (3 days) and on request. Without Garmin, the night is scored from the sound estimate | Built (step 5) |
-| `caffeine` | Drink log + defaults | Quick-add, edit and delete, resolving mg at log time | Planned (step 7) |
+| `diary` (+ `ui/diary`) | `WakePromptRule`, drink resolution, the diary sheets and `DiaryPrompts` | Bed-tap context, wake notes on screen-on, the morning survey, and the caffeine log (mg resolved at log time from `Settings`); see [diary.md](diary.md) | Built (step 7, 2026-11-05); editing drinks and caffeine defaults not yet |
 | `export` | JSON exporter | Writes everything through the Storage Access Framework, with a schema version | Planned (step 9) |
 
 Wiring is manual: a small `AppContainer`, created in the `Application` class, holds the database, the repository, the night tracker and its live status, the alarm controller and its state, and an app-wide coroutine scope for work that must outlive a screen (such as the service's final sample flush). There's no Hilt or Dagger, because the app is small enough that a DI framework would cost more build time and complexity than it saves.

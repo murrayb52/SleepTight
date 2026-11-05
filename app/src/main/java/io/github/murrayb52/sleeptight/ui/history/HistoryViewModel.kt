@@ -19,6 +19,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import io.github.murrayb52.sleeptight.data.CaffeineEntry
+import io.github.murrayb52.sleeptight.data.MorningSurvey
+import io.github.murrayb52.sleeptight.data.NightContext
+import io.github.murrayb52.sleeptight.data.WakeNote
+import io.github.murrayb52.sleeptight.diary.toDose
+import io.github.murrayb52.sleeptight.metrics.CAFFEINE_LOOKBACK
+import io.github.murrayb52.sleeptight.metrics.caffeineAt
+import java.time.Instant
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -68,6 +78,17 @@ data class NightDetailUi(
     val garminCheck: GarminImporter.Result? = null,
     /** Lowest and average heart rate in the night, from Garmin; null without heart-rate data. */
     val heartRate: HeartRateUi? = null,
+    val diary: DiaryUi = DiaryUi(),
+)
+
+/** The night's diary: bed-tap context, wake notes, the morning survey and caffeine at bedtime. */
+data class DiaryUi(
+    val context: NightContext? = null,
+    val wakeNotes: List<WakeNote> = emptyList(),
+    val survey: MorningSurvey? = null,
+    /** Caffeine left at the bed tap, from drinks in the day before it. */
+    val caffeineAtBedMg: Double = 0.0,
+    val drinks: List<CaffeineEntry> = emptyList(),
 )
 
 data class HeartRateUi(val lowest: Int, val average: Int)
@@ -84,8 +105,9 @@ class NightDetailViewModel(
         repository.noiseEvents(nightId),
         repository.settings,
         combine(repository.stageSegments(nightId), repository.heartRate(nightId), ::Pair),
-        check,
-    ) { night, events, settings, (segments, hr), (checking, result) ->
+        combine(check, diary(), ::Pair),
+    ) { night, events, settings, (segments, hr), (checkState, diary) ->
+        val (checking, result) = checkState
         val score = ScoreCache.decode(night?.scoreJson)
         // Show the segments the score used: Garmin's if there are any, otherwise the estimate.
         val source = if (score?.source == "GARMIN") StageSource.GARMIN else StageSource.ESTIMATED
@@ -101,8 +123,21 @@ class NightDetailViewModel(
             checkingGarmin = checking,
             garminCheck = result,
             heartRate = hr.takeIf { it.isNotEmpty() }?.let { s -> HeartRateUi(s.minOf { it.bpm }, Math.round(s.map { it.bpm }.average()).toInt()) },
+            diary = diary,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NightDetailUi())
+
+    private fun diary(): Flow<DiaryUi> {
+        val drinks = combine(repository.night(nightId), repository.settings, ::Pair).map { (night, settings) ->
+            if (night == null) return@map 0.0 to emptyList()
+            val bed = Instant.ofEpochMilli(night.bedTapAt)
+            val list = repository.caffeineBetween(bed.minus(CAFFEINE_LOOKBACK), bed.plusMillis(1))
+            caffeineAt(list.map { it.toDose() }, bed, settings.caffeineHalfLifeHours) to list
+        }
+        return combine(repository.context(nightId), repository.wakeNotes(nightId), repository.survey(nightId), drinks) { context, notes, survey, (mg, list) ->
+            DiaryUi(context, notes, survey, mg, list)
+        }
+    }
 
     /** Deletes this night and everything recorded in it, then calls [onDeleted]. */
     fun onDelete(onDeleted: () -> Unit) {

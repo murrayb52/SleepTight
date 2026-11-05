@@ -91,4 +91,30 @@ class NightRepository(
 
     /** Per-second relative levels recorded so far for a night, oldest first. */
     suspend fun soundSamples(nightId: Long): List<SoundSample> = db.soundSampleDao().getForNight(nightId)
+
+    // ---- The sleep diary and caffeine (2026-11-05)
+
+    private val diary = db.diaryDao()
+    private val caffeine = db.caffeineEntryDao()
+
+    suspend fun saveContext(context: NightContext) = diary.upsertContext(context)
+
+    fun context(nightId: Long): Flow<NightContext?> = diary.observeContext(nightId)
+
+    suspend fun addWakeNote(note: WakeNote): Long = diary.insertWakeNote(note)
+
+    fun wakeNotes(nightId: Long): Flow<List<WakeNote>> = diary.observeWakeNotes(nightId)
+
+    suspend fun saveSurvey(survey: MorningSurvey) = diary.upsertSurvey(survey)
+
+    fun survey(nightId: Long): Flow<MorningSurvey?> = diary.observeSurvey(nightId)
+
+    /** Drinks logged at or after [from], oldest first. */
+    fun caffeineSince(from: Instant): Flow<List<CaffeineEntry>> = caffeine.observeSince(from.toEpochMilli())
+
+    suspend fun caffeineBetween(from: Instant, to: Instant): List<CaffeineEntry> = caffeine.getBetween(from.toEpochMilli(), to.toEpochMilli())
+
+    suspend fun addCaffeine(entry: CaffeineEntry): Long = caffeine.insert(entry)
+
+    suspend fun deleteCaffeine(entry: CaffeineEntry) = caffeine.delete(entry)
 }

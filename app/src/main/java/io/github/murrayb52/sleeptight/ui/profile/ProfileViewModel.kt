@@ -55,6 +55,7 @@ class ProfileViewModel(
     fun onWindow(minutes: Int) = update { it.copy(alarmWindowStartMinutes = Math.floorMod(it.alarmWindowEndMinutes - minutes, 24 * 60)) }
     fun onReminder(on: Boolean) = update { it.copy(bedtimeReminderEnabled = on) }
     fun onBedsideCheck(on: Boolean) = update { it.copy(bedsideCheckEnabled = on) }
+    fun onEarplugsDefault(on: Boolean) = update { it.copy(earplugsDefault = on) }
     fun onSound(key: String?) = update { it.copy(alarmSound = key) }
 
     /** Re-reads Garmin's connection; called whenever Profile comes into view (e.g. back from Health Connect). */

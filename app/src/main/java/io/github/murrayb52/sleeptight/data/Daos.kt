@@ -165,6 +165,9 @@ interface CaffeineEntryDao {
 
     @Query("SELECT * FROM caffeine_entries ORDER BY timestamp DESC")
     fun observeAll(): Flow<List<CaffeineEntry>>
+
+    @Query("SELECT * FROM caffeine_entries WHERE timestamp >= :from ORDER BY timestamp")
+    fun observeSince(from: Long): Flow<List<CaffeineEntry>>
 }
 
 @Dao
@@ -186,4 +189,29 @@ interface ScreenEventDao {
 
     @Query("SELECT * FROM screen_events WHERE nightId = :nightId ORDER BY timestamp")
     suspend fun getForNight(nightId: Long): List<ScreenEvent>
+}
+
+/** The sleep diary: bed-tap context, wake notes and the morning survey. */
+@Dao
+interface DiaryDao {
+    @Upsert
+    suspend fun upsertContext(context: NightContext)
+
+    @Query("SELECT * FROM night_context WHERE nightId = :nightId")
+    fun observeContext(nightId: Long): Flow<NightContext?>
+
+    @Insert
+    suspend fun insertWakeNote(note: WakeNote): Long
+
+    @Query("SELECT * FROM wake_notes WHERE nightId = :nightId ORDER BY at")
+    fun observeWakeNotes(nightId: Long): Flow<List<WakeNote>>
+
+    @Upsert
+    suspend fun upsertSurvey(survey: MorningSurvey)
+
+    @Query("SELECT * FROM morning_surveys WHERE nightId = :nightId")
+    fun observeSurvey(nightId: Long): Flow<MorningSurvey?>
+
+    @Query("SELECT * FROM morning_surveys WHERE nightId = :nightId")
+    suspend fun getSurvey(nightId: Long): MorningSurvey?
 }

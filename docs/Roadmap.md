@@ -26,11 +26,12 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Shrinking snoozes**: 9 → 7 → 5 → 3 → 2 minutes, at most 5, then only I'm up. Every snooze is counted | [alarm.md](alarm.md#snooze-and-dismiss) |
 | **Bedtime reminder** 30 minutes before the bedtime goal (default 21:30 for 22:00). Skipped once you're in bed | [alarm.md](alarm.md#bedtime-reminder) |
 | **Sleep score maths** (0–100 with breakdown), night metrics and regularity, unit tested. Not shown in the app until there's sleep data (step 5) and a report (step 6) | [metrics.md](metrics.md) |
+| **Sleep diary**: earplugs and context tags at the bed tap, a silent "Awake?" prompt with one-tap reasons when the screen wakes in the night, a "How did you sleep?" survey after I'm up, all shown on the night's page | [diary.md](diary.md) |
+| **Caffeine log**: quick-add coffee, decaf and Coke from the Sleep tab, with caffeine projected to bedtime and caffeine at bedtime on the night's page | [diary.md](diary.md#caffeine-build-step-7) |
 | Denial paths for microphone, notifications, battery restrictions (with Samsung advice), exact alarms, full-screen alarms and alarm volume | each page above |
 
 ## Next: v1 build order (remaining)
 
-7. Caffeine log and caffeine at bedtime (shown on the night's page too)
 8. Trends and sleep debt
 9. JSON export
 10. Overnight test on the phone, then fixes
@@ -38,6 +39,8 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 ## Agreed, not built yet
 
 - **A better sleep model from sound (investigation, started 2026-11-05).** The threshold estimate disagreed badly with Garmin on the first night: much of the noise was made in deep sleep. Plan: collect 1–4 weeks of nights with the per-second measured level, peak and three frequency bands, plus screen on/off/unlock events, alongside Garmin's stages (all stored since database version 5; see [sound-monitoring.md](sound-monitoring.md#what-each-stored-second-holds)). Then pull the database, graph sound against Garmin, and build a model from the data rather than assumptions, for example testing hysteresis (it may take more noise to wake you than to keep you awake). Data comes off the phone over `adb` until JSON export (step 9). Don't retune `SoundConfig` from single nights in the meantime.
+- **Investigation phases (agreed 2026-11-05).** Phase 1: about a week of normal nights with earplugs, the S21 set up as on the first night, the Garmin and the diary; treat the first 2–3 nights as settling-in. Phase 2: 5 consecutive nights without earplugs, then at least 5 back with them, as the control. Later: the laptop with the Brio and the laptop's own mic recording whole nights (near and far), empty-room nights on the A17, and a separate sleep-video study (an infrared camera, or an mmWave radar such as the LD2410 on the user's ESP32-C2s). Design: [sleep diary](superpowers/specs/2026-11-05-sleep-diary-design.md).
+- **Editing in the diary**: change a drink's mg, the caffeine defaults (Profile) and past diary entries.
 - **Mic calibration to dB SPL**: a few minutes beside a sound-meter app gives the S21's offset from dBFS, so the Sleep screen can show the room against WHO's 40 dB guideline. Not a blocker for collecting: the offset is one constant, applied afterwards to every stored second. **While collecting, keep the audio path fixed** so that one offset stays valid: same phone, `VOICE_RECOGNITION` source (no automatic gain), 16 kHz mono. A change means a separate calibration for nights after it.
 - **Recordings of noise events** only if the band levels prove too coarse and an actual classifier is wanted (the user's call, 2026-11-05).
 

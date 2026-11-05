@@ -1,7 +1,11 @@
 package io.github.murrayb52.sleeptight.ui.home
 
 import io.github.murrayb52.sleeptight.alarm.AlarmState
+import io.github.murrayb52.sleeptight.data.CaffeineEntry
 import io.github.murrayb52.sleeptight.data.Night
+import io.github.murrayb52.sleeptight.diary.toDose
+import io.github.murrayb52.sleeptight.metrics.CAFFEINE_LOOKBACK
+import io.github.murrayb52.sleeptight.metrics.caffeineAt
 import io.github.murrayb52.sleeptight.data.Settings
 import io.github.murrayb52.sleeptight.data.NoiseEvent
 import io.github.murrayb52.sleeptight.scoring.ScoreCache
@@ -29,18 +33,44 @@ data class HomeUiState(
     val noiseEvents: List<NoiseEventUi> = emptyList(),
     val alarm: AlarmUi = AlarmUi(),
     val goals: GoalsUi = GoalsUi(),
+    /** Raw settings, for resolving a logged drink's caffeine. */
+    val settings: Settings = Settings(),
+    val caffeine: CaffeineUi = CaffeineUi(),
 )
+
+/** Caffeine for the Sleep tab: drinks in the last day and what's projected to be left at bedtime. */
+data class CaffeineUi(val recent: List<CaffeineEntry> = emptyList(), val byBedtimeMg: Double = 0.0)
+
+/**
+ * The moment to project caffeine to: the next bedtime goal, or now if that was within the last
+ * 6 hours (you're up late, so bedtime is now).
+ */
+fun caffeineTarget(now: Instant, zone: ZoneId, bedtime: LocalTime): Instant {
+    val local = now.atZone(zone)
+    var next = local.toLocalDate().atTime(bedtime).atZone(zone)
+    if (next.isBefore(local)) next = next.plusDays(1)
+    return if (Duration.between(local, next) > Duration.ofHours(18)) now else next.toInstant()
+}
+
+fun caffeineUi(entries: List<CaffeineEntry>, settings: Settings, now: Instant, zone: ZoneId): CaffeineUi {
+    val bedtime = LocalTime.MIDNIGHT.plusMinutes(settings.targetBedtimeMinutes.toLong())
+    val target = caffeineTarget(now, zone, bedtime)
+    val recent = entries.filter { it.timestamp >= now.minus(CAFFEINE_LOOKBACK).toEpochMilli() && it.timestamp <= now.toEpochMilli() }
+    return CaffeineUi(recent, caffeineAt(entries.map { it.toDose() }, target, settings.caffeineHalfLifeHours))
+}
 
 data class GoalsUi(
     val bedtime: LocalTime = LocalTime.of(22, 0),
     val reminderEnabled: Boolean = true,
     val bedsideCheckEnabled: Boolean = true,
+    val earplugsDefault: Boolean = true,
 )
 
 fun goalsUi(settings: Settings) = GoalsUi(
     bedtime = LocalTime.MIDNIGHT.plusMinutes(settings.targetBedtimeMinutes.toLong()),
     reminderEnabled = settings.bedtimeReminderEnabled,
     bedsideCheckEnabled = settings.bedsideCheckEnabled,
+    earplugsDefault = settings.earplugsDefault,
 )
 
 data class AlarmUi(

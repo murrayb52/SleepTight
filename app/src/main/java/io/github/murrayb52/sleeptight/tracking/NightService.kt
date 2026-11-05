@@ -147,8 +147,15 @@ class NightService : Service() {
         } finally {
             audio.stop()
             audio.release()
-            unregisterReceiver(screen)
             withContext(NonCancellable) { recorder.flush() }
+            // Registered on the application context: the service may already be destroyed by now,
+            // and Android drops a destroyed service's receivers itself, so unregistering through
+            // the service crashed the app at I'm up (found 2026-11-05).
+            try {
+                applicationContext.unregisterReceiver(screen)
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "Screen receiver was already gone", e)
+            }
         }
     }
 
@@ -170,6 +177,7 @@ class NightService : Service() {
                 container.appScope.launch {
                     container.database.screenEventDao().insert(ScreenEvent(nightId = nightId, timestamp = at, type = type))
                 }
+                if (type == ScreenEventType.ON) container.onScreenOnInNight(nightId, at)
             }
         }
         val filter = IntentFilter().apply {
@@ -177,7 +185,7 @@ class NightService : Service() {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_USER_PRESENT)
         }
-        ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(applicationContext, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         return receiver
     }
 

@@ -1,5 +1,6 @@
 package io.github.murrayb52.sleeptight.alarm
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -130,7 +131,11 @@ class AlarmActivity : ComponentActivity() {
                     startActivity(MainActivity.openNight(this, id))
                     finish()
                 },
-                onDone = { finish() },
+                // Into the app either way, where "How did you sleep?" is waiting.
+                onDone = {
+                    startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    finish()
+                },
             )
         }
     }

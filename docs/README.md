@@ -17,7 +17,7 @@ Pages are added as each build step lands:
 | Overnight sound monitoring and noise events | [`sound-monitoring.md`](sound-monitoring.md) | 3 |
 | Smart alarm, snoozes, `AlarmEvents` hooks | [`alarm.md`](alarm.md) | 4 |
 | Garmin import via Health Connect, fallback estimation | [`garmin.md`](garmin.md) | 5 |
-| Caffeine log and caffeine at bedtime | _not yet written_ | 7 |
+| Sleep diary (bed-tap context, wake notes, morning survey), caffeine log and caffeine at bedtime | [`diary.md`](diary.md) | 7 |
 | Trends and sleep debt | _not yet written_ | 8 |
 | JSON export format | _not yet written_ | 9 |
 
@@ -26,3 +26,4 @@ Pages are added as each build step lands:
 Dated build plans live in [`plan/`](plan/). They record intent at the time of writing and aren't kept in sync with the code.
 
 - [`2026-11-04-v1-build-plan.md`](plan/2026-11-04-v1-build-plan.md): the v1 spec and build order
+- [`superpowers/specs/2026-11-05-sleep-diary-design.md`](superpowers/specs/2026-11-05-sleep-diary-design.md): the sleep-diary design for the sound-model investigation

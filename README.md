@@ -118,7 +118,7 @@ Taken from [`docs/plan/2026-11-04-v1-build-plan.md`](docs/plan/2026-11-04-v1-bui
 - [x] 4. Alarm: scheduling, smart trigger, ramp, snooze counting, `AlarmEvents` hooks, sounds (generated chime; bundled sound files to follow)
 - [x] 5. Health Connect import + trimming + fallback estimation
 - [x] 6. Morning report screen
-- [ ] 7. Caffeine log + caffeine at bedtime
+- [x] 7. Caffeine log + caffeine at bedtime (with the sleep diary)
 - [ ] 8. Trends + sleep debt
 - [ ] 9. JSON export
 - [ ] 10. Overnight test on a real phone, then fixes

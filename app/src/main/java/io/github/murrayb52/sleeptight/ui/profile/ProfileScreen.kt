@@ -91,6 +91,7 @@ fun ProfileRoute(onOpenCredits: () -> Unit, viewModel: ProfileViewModel = viewMo
         onWindow = viewModel::onWindow,
         onReminder = viewModel::onReminder,
         onBedsideCheck = viewModel::onBedsideCheck,
+        onEarplugsDefault = viewModel::onEarplugsDefault,
         onSound = viewModel::onSound,
         onOpenCredits = onOpenCredits,
         onGarmin = {
@@ -125,6 +126,7 @@ fun ProfileScreen(
     onWindow: (Int) -> Unit = {},
     onReminder: (Boolean) -> Unit = {},
     onBedsideCheck: (Boolean) -> Unit = {},
+    onEarplugsDefault: (Boolean) -> Unit = {},
     onSound: (String?) -> Unit = {},
     onOpenCredits: () -> Unit = {},
     onGarmin: () -> Unit = {},
@@ -175,7 +177,8 @@ fun ProfileScreen(
         }
         Section(stringResource(R.string.section_reminders)) {
             ToggleRow(stringResource(R.string.reminder_row), s.bedtimeReminderEnabled, onReminder)
-            ToggleRow(stringResource(R.string.bedside_row), s.bedsideCheckEnabled, onBedsideCheck, last = true)
+            ToggleRow(stringResource(R.string.bedside_row), s.bedsideCheckEnabled, onBedsideCheck)
+            ToggleRow(stringResource(R.string.earplugs_default_row), s.earplugsDefault, onEarplugsDefault, last = true)
         }
         Section(stringResource(R.string.section_data)) {
             val g = state.garmin

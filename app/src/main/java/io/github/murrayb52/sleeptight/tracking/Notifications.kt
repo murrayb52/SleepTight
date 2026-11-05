@@ -22,10 +22,12 @@ object Notifications {
     const val ALARM_ID = 3
     private const val SNOOZED_ID = 4
     private const val REMINDER_ID = 5
+    private const val WAKE_PROMPT_ID = 6
     private const val CHANNEL_TRACKING = "tracking"
     private const val CHANNEL_ALERTS = "alerts"
     private const val CHANNEL_ALARM = "alarm"
     private const val CHANNEL_REMINDERS = "reminders"
+    private const val CHANNEL_NIGHT_NOTES = "night_notes"
 
     fun createChannels(context: Context) {
         val manager = NotificationManagerCompat.from(context)
@@ -50,6 +52,15 @@ object Notifications {
                 .setVibrationEnabled(false)
                 .build(),
         )
+        // Silent: it appears when the screen is already on, and must never wake anyone.
+        manager.createNotificationChannel(
+            NotificationChannelCompat.Builder(CHANNEL_NIGHT_NOTES, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName(context.getString(R.string.channel_night_notes))
+                .setDescription(context.getString(R.string.channel_night_notes_description))
+                .setSound(null, null)
+                .setVibrationEnabled(false)
+                .build(),
+        )
         manager.createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL_REMINDERS, NotificationManagerCompat.IMPORTANCE_DEFAULT)
                 .setName(context.getString(R.string.channel_reminders))
@@ -57,6 +68,32 @@ object Notifications {
                 .build(),
         )
     }
+
+    /**
+     * "Awake? Tap to note why", when the screen turns on in the night. Silent, so it can't wake
+     * anyone; it goes away by itself after a while.
+     */
+    fun showWakePrompt(context: Context) {
+        val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_NIGHT_NOTES)
+            .setSmallIcon(R.drawable.ic_stat_tracking)
+            .setContentTitle(context.getString(R.string.wake_prompt_title))
+            .setContentText(context.getString(R.string.wake_prompt_text))
+            .setContentIntent(openApp(context))
+            .setAutoCancel(true)
+            .setSilent(true)
+            .setTimeoutAfter(io.github.murrayb52.sleeptight.diary.WakePromptRule.SHOW_FOR.toMillis())
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .build()
+        try {
+            manager.notify(WAKE_PROMPT_ID, notification)
+        } catch (e: SecurityException) {
+            // Permission revoked; "Note a waking" in the app still works.
+        }
+    }
+
+    fun cancelWakePrompt(context: Context) = NotificationManagerCompat.from(context).cancel(WAKE_PROMPT_ID)
 
     fun showBedtimeReminder(context: Context, bedtime: String) {
         val manager = NotificationManagerCompat.from(context)

@@ -16,8 +16,11 @@ import androidx.room.RoomDatabase
         ScreenEvent::class,
         CaffeineEntry::class,
         Settings::class,
+        NightContext::class,
+        WakeNote::class,
+        MorningSurvey::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
     autoMigrations = [
         // 1 → 2: Settings.alarmEnabled (defaults to on).
@@ -29,6 +32,9 @@ import androidx.room.RoomDatabase
         // 4 → 5: measured level, peak and band levels on sound_samples (null for older nights), and
         // screen_events. Added for the sound-model investigation (2026-11-05).
         AutoMigration(from = 4, to = 5),
+        // 5 → 6: the sleep diary (night_context, wake_notes, morning_surveys) and
+        // Settings.earplugsDefault (defaults to on). 2026-11-05.
+        AutoMigration(from = 5, to = 6),
     ],
 )
 abstract class SleepTightDatabase : RoomDatabase() {
@@ -40,6 +46,7 @@ abstract class SleepTightDatabase : RoomDatabase() {
     abstract fun screenEventDao(): ScreenEventDao
     abstract fun caffeineEntryDao(): CaffeineEntryDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun diaryDao(): DiaryDao
 
     companion object {
         private const val NAME = "sleeptight.db"

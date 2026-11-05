@@ -52,6 +52,7 @@ import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.health.GarminImporter
 import io.github.murrayb52.sleeptight.metrics.NightDate
+import io.github.murrayb52.sleeptight.ui.diary.DiaryPrompts
 import io.github.murrayb52.sleeptight.ui.history.HistoryRoute
 import io.github.murrayb52.sleeptight.ui.history.NightDetailRoute
 import io.github.murrayb52.sleeptight.ui.home.HomeRoute
@@ -91,6 +92,7 @@ fun SleepTightApp(openNightId: Long? = null) {
                     NightDetailRoute(e.arguments?.getLong("id") ?: 0, onBack = { nav.popBackStack() })
                 }
             }
+            DiaryPrompts(container)
             // Garmin rewrote a night after it was imported: say so, near the bottom, until swiped away.
             val updates by container.garminUpdates.collectAsStateWithLifecycle()
             updates.firstOrNull()?.let { update ->

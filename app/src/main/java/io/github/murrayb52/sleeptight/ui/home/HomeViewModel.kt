@@ -8,7 +8,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.alarm.AlarmController
+import io.github.murrayb52.sleeptight.data.CaffeineEntry
+import io.github.murrayb52.sleeptight.data.NightContext
 import io.github.murrayb52.sleeptight.data.NightRepository
+import io.github.murrayb52.sleeptight.ui.diary.TonightAnswers
 import io.github.murrayb52.sleeptight.tracking.NightTracker
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +59,9 @@ class HomeViewModel(
 
     private val nights = combine(repository.openNight, repository.settings, ::Pair)
 
+    // From a day and a half back, so the bedtime projection sees every drink in the 24 h before it.
+    private val caffeine = repository.caffeineSince(clock.instant().minus(Duration.ofHours(36)))
+
     private val openNightNoise = repository.openNight
         .map { it?.id }
         .distinctUntilChanged()
@@ -66,8 +72,8 @@ class HomeViewModel(
         minuteTicker,
         promptDismissedFor,
         combine(tracker.status, alarm.state, ::Pair),
-        openNightNoise,
-    ) { (open, settings), now, dismissed, (tracking, alarmState), noise ->
+        combine(openNightNoise, caffeine, ::Pair),
+    ) { (open, settings), now, dismissed, (tracking, alarmState), (noise, drinks) ->
         buildHomeUiState(
             openNight = open,
             now = now,
@@ -79,13 +85,20 @@ class HomeViewModel(
             noiseEvents = noise.map { it.toUi() }.sortedByDescending { it.start },
             alarm = alarmUi(settings, open, alarmState),
             goals = goalsUi(settings),
+            settings = settings,
+            caffeine = caffeineUi(drinks, settings, clock.instant(), clock.zone),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
-    /** Opens the night; starts sound monitoring if the microphone is allowed. */
-    fun onGoingToBed(trackSound: Boolean) {
+    /** Opens the night with tonight's diary answers; starts sound monitoring if the microphone is allowed. */
+    fun onGoingToBed(trackSound: Boolean, answers: TonightAnswers? = null) {
         viewModelScope.launch {
             val night = repository.goToBed()
+            answers?.let {
+                repository.saveContext(
+                    NightContext(night.id, it.earplugs, it.alcohol, it.partner, it.differentBed, it.readingBeforeBed, it.lastScreens),
+                )
+            }
             if (trackSound) tracker.start(night.id)
             if (night.alarmWindowEnd == null) alarm.arm(night, repository.getSettings())
         }
@@ -113,6 +126,14 @@ class HomeViewModel(
             val length = Math.floorMod(s.alarmWindowEndMinutes - s.alarmWindowStartMinutes, 24 * 60)
             repository.updateSettings(s.copy(alarmWindowEndMinutes = end, alarmWindowStartMinutes = Math.floorMod(end - length, 24 * 60)))
         }
+    }
+
+    fun onAddCaffeine(entry: CaffeineEntry) {
+        viewModelScope.launch { repository.addCaffeine(entry) }
+    }
+
+    fun onDeleteCaffeine(entry: CaffeineEntry) {
+        viewModelScope.launch { repository.deleteCaffeine(entry) }
     }
 
     fun onBedsideCheckDontShow() {
