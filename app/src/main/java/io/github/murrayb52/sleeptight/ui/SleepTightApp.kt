@@ -2,6 +2,7 @@ package io.github.murrayb52.sleeptight.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,14 +15,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -29,6 +36,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -42,12 +50,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.SleepTightApplication
+import io.github.murrayb52.sleeptight.health.GarminImporter
+import io.github.murrayb52.sleeptight.metrics.NightDate
 import io.github.murrayb52.sleeptight.ui.history.HistoryRoute
 import io.github.murrayb52.sleeptight.ui.history.NightDetailRoute
 import io.github.murrayb52.sleeptight.ui.home.HomeRoute
 import io.github.murrayb52.sleeptight.ui.profile.CreditsScreen
 import io.github.murrayb52.sleeptight.ui.profile.ProfileRoute
 import io.github.murrayb52.sleeptight.ui.theme.Palette
+import java.time.format.DateTimeFormatter
 
 private enum class Tab(val route: String, val label: Int) { SLEEP("sleep", R.string.tab_sleep), HISTORY("history", R.string.tab_history), PROFILE("profile", R.string.tab_profile) }
 
@@ -72,12 +83,28 @@ fun SleepTightApp(openNightId: Long? = null) {
     Column(Modifier.fillMaxSize().background(Palette.Sky)) {
         Box(Modifier.weight(1f)) {
             NavHost(nav, startDestination = Tab.SLEEP.route) {
-                composable(Tab.SLEEP.route) { HomeRoute(onOpenNight = { nav.navigate("night/$it") }) }
+                composable(Tab.SLEEP.route) { HomeRoute() }
                 composable(Tab.HISTORY.route) { HistoryRoute(onOpenNight = { nav.navigate("night/$it") }) }
                 composable(Tab.PROFILE.route) { ProfileRoute(onOpenCredits = { nav.navigate(CREDITS_ROUTE) }) }
                 composable(CREDITS_ROUTE) { CreditsScreen(onBack = { nav.popBackStack() }) }
                 composable(NIGHT_ROUTE, arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
                     NightDetailRoute(e.arguments?.getLong("id") ?: 0, onBack = { nav.popBackStack() })
+                }
+            }
+            // Garmin rewrote a night after it was imported: say so, near the bottom, until swiped away.
+            val updates by container.garminUpdates.collectAsStateWithLifecycle()
+            updates.firstOrNull()?.let { update ->
+                val dismiss = { container.garminUpdates.value = container.garminUpdates.value.filterNot { it.nightId == update.nightId } }
+                key(update.nightId) {
+                    GarminUpdateNote(
+                        update,
+                        onOpen = {
+                            dismiss()
+                            nav.navigate("night/${update.nightId}")
+                        },
+                        onDismiss = dismiss,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
                 }
             }
         }
@@ -142,6 +169,33 @@ private fun DrawScope.drawTabIcon(tab: Tab, colour: Color) {
                 cubicTo(s * 0.25f, s * 0.6f, s * 0.75f, s * 0.6f, s * 0.84f, s * 0.84f)
             }
             drawPath(body, colour, style = Stroke(w, cap = StrokeCap.Round))
+        }
+    }
+}
+
+/** A small card saying Garmin changed a night's data and score. Swipe either way to dismiss; tap to open the night. */
+@Composable
+private fun GarminUpdateNote(update: GarminImporter.Update, onOpen: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    val state = rememberSwipeToDismissBoxState()
+    LaunchedEffect(state.currentValue) {
+        if (state.currentValue != SwipeToDismissBoxValue.Settled) onDismiss()
+    }
+    val date = DateTimeFormatter.ofPattern("EEE d MMM").format(NightDate.of(update.bedTapAt, update.zone))
+    SwipeToDismissBox(state, backgroundContent = {}, modifier = modifier.padding(16.dp).testTag("garminUpdate")) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Palette.Raised)
+                .clickable(onClick = onOpen)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            Text(
+                stringResource(R.string.garmin_updated, date, update.scoreBefore?.toString() ?: "–", update.scoreAfter?.toString() ?: "–"),
+                style = MaterialTheme.typography.titleSmall,
+                color = Palette.Text,
+            )
+            Text(stringResource(R.string.garmin_updated_hint), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
     }
 }

@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -93,6 +94,22 @@ class MigrationTest {
                 assertEquals(0, c.getInt(0))
                 assertEquals(1, c.getInt(1))
             }
+        }
+    }
+
+    @Test
+    fun version4To5KeepsSoundSamplesAndAddsScreenEvents() {
+        helper.createDatabase(dbName, 4).use { db ->
+            db.execSQL("INSERT INTO nights (id, bedTapAt, wakeTapAt, zoneId, snoozeCount, garminImported) VALUES (6, 1000, 2000, 'Africa/Johannesburg', 0, 0)")
+            db.execSQL("INSERT INTO sound_samples (nightId, timestamp, dbRelative) VALUES (6, 1000, 3.5)")
+        }
+        helper.runMigrationsAndValidate(dbName, 5, true).use { db ->
+            db.query("SELECT dbRelative, dbfs, peakDbfs, lowDbfs, midDbfs, highDbfs FROM sound_samples").use { c ->
+                c.moveToFirst()
+                assertEquals(3.5, c.getDouble(0), 0.0)
+                (1..5).forEach { assertTrue(c.isNull(it)) } // older nights have no measured levels
+            }
+            db.execSQL("INSERT INTO screen_events (nightId, timestamp, type) VALUES (6, 1500, 'UNLOCKED')")
         }
     }
 }

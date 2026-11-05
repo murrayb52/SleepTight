@@ -49,6 +49,10 @@ class AlarmRingService : Service() {
             }
             ACTION_SNOOZE -> snooze()
             ACTION_DISMISS -> dismiss()
+            ACTION_IM_UP -> {
+                dismiss()
+                container.appScope.launch { container.endNightFromAlarm() }
+            }
             else -> stopSelf()
         }
         return START_NOT_STICKY
@@ -65,7 +69,7 @@ class AlarmRingService : Service() {
         Notifications.cancelSnoozed(this)
         container.appScope.launch {
             val repo = container.nightRepository
-            // The chosen sound (falls back to the chime). Started here, then the ramp takes over.
+            // The chosen sound (a broken file falls back to the chime). Started here, then the ramp takes over.
             val sound = AlarmSound.of(repo.getSettings().alarmSound)
             withContext(Dispatchers.Main) {
                 if (state.value is AlarmState.Ringing && player == null) {
@@ -122,8 +126,8 @@ class AlarmRingService : Service() {
     }
 
     /**
-     * Stops the alarm. It never ends the night: that's always the separate "I'm up" tap, which the
-     * alarm screen offers straight after Stop.
+     * Stops the alarm without ending the night: when it has rung unanswered for [MAX_RING], or as
+     * part of I'm up ([ACTION_IM_UP], which then ends the night).
      */
     private fun dismiss() {
         val nightId = when (val s = state.value) {
@@ -161,6 +165,9 @@ class AlarmRingService : Service() {
         const val ACTION_SNOOZE = "io.github.murrayb52.sleeptight.action.SNOOZE"
         /** Stops the alarm (Stop, I'm up, or no answer for 10 minutes). The night stays open. */
         const val ACTION_DISMISS = "io.github.murrayb52.sleeptight.action.DISMISS"
+
+        /** I'm up: stops the alarm and ends the night in one tap (2026-11-05). */
+        const val ACTION_IM_UP = "io.github.murrayb52.sleeptight.action.IM_UP"
 
         /** An unanswered alarm stops after this long rather than ringing all day. */
         val MAX_RING: Duration = Duration.ofMinutes(10)

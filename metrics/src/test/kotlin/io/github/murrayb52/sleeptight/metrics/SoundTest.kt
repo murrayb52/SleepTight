@@ -128,8 +128,8 @@ class ActivityTest {
         val start = at("2026-11-03T23:00")
         val samples = (0 until 180L).map { s ->
             val level = when {
-                s < 60 -> if (s < 5) 9.0 else 2.0 // 5 active seconds in minute 0
-                s < 120 -> 8.0 // exactly at the threshold: not active
+                s < 60 -> if (s < 5) 13.0 else 11.0 // 5 active seconds in minute 0; 11 dB is below the 12 dB threshold
+                s < 120 -> 12.0 // exactly at the threshold: not active
                 else -> 20.0 // all 60 active
             }
             LevelSample(start.plusSeconds(s), level)
@@ -171,5 +171,64 @@ class LevelAccumulatorTest {
         acc.reset()
         assertEquals(SoundLevel.FLOOR_DBFS, acc.dbfs(), 0.0)
         assertEquals(0, acc.samples)
+    }
+}
+
+class SecondFeaturesTest {
+    private val rate = 16_000
+
+    /** One second of a sine at [hz] with peak [amplitude], fed in 100 ms chunks after a settling second. */
+    private fun featuresOf(hz: Double, amplitude: Double = 8_000.0): SecondFeatures {
+        val acc = LevelAccumulator(rate)
+        fun second(offset: Int) = ShortArray(rate) { (amplitude * sin(2 * PI * hz * (offset + it) / rate)).toInt().toShort() }
+        // The filters carry state across seconds; let them settle first, as they do overnight.
+        acc.add(second(0), rate)
+        acc.reset()
+        second(rate).toList().chunked(1_600).forEach { acc.add(it.toShortArray(), it.size) }
+        return acc.features()
+    }
+
+    @Test
+    fun `the whole-second level matches dbfs`() {
+        val f = featuresOf(1_000.0)
+        assertEquals(20 * kotlin.math.log10(8_000.0 / Short.MAX_VALUE / kotlin.math.sqrt(2.0)), f.dbfs, 0.1)
+    }
+
+    @Test
+    fun `peak is the loudest single sample`() {
+        val f = featuresOf(1_000.0, amplitude = 16_000.0)
+        assertEquals(20 * kotlin.math.log10(16_000.0 / Short.MAX_VALUE), f.peakDbfs, 0.1)
+    }
+
+    @Test
+    fun `a low hum lands in the low band`() {
+        val f = featuresOf(100.0)
+        assertEquals(f.dbfs, f.lowDbfs, 1.0)
+        assertTrue("mid ${f.midDbfs} vs ${f.dbfs}", f.midDbfs < f.dbfs - 10)
+        assertTrue("high ${f.highDbfs} vs ${f.dbfs}", f.highDbfs < f.dbfs - 30)
+    }
+
+    @Test
+    fun `a voice-range tone lands in the mid band`() {
+        val f = featuresOf(800.0)
+        assertEquals(f.dbfs, f.midDbfs, 1.5)
+        assertTrue("low ${f.lowDbfs}", f.lowDbfs < f.dbfs - 10)
+        assertTrue("high ${f.highDbfs}", f.highDbfs < f.dbfs - 10)
+    }
+
+    @Test
+    fun `a hiss-range tone lands in the high band`() {
+        val f = featuresOf(5_000.0)
+        assertEquals(f.dbfs, f.highDbfs, 1.0)
+        assertTrue("low ${f.lowDbfs}", f.lowDbfs < f.dbfs - 30)
+        assertTrue("mid ${f.midDbfs}", f.midDbfs < f.dbfs - 10)
+    }
+
+    @Test
+    fun `silence is the floor in every band`() {
+        val acc = LevelAccumulator(rate)
+        acc.add(ShortArray(rate), rate)
+        val f = acc.features()
+        assertEquals(listOf(SoundLevel.FLOOR_DBFS, SoundLevel.FLOOR_DBFS, SoundLevel.FLOOR_DBFS, SoundLevel.FLOOR_DBFS, SoundLevel.FLOOR_DBFS), listOf(f.dbfs, f.peakDbfs, f.lowDbfs, f.midDbfs, f.highDbfs))
     }
 }

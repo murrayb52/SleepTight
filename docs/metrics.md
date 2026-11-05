@@ -20,14 +20,16 @@ Stages are `AWAKE`, `LIGHT`, `DEEP`, `REM` and `UNKNOWN`. **`UNKNOWN` counts as 
 
 ## Sleep estimate without Garmin (`SleepEstimator`)
 
-When a night has no Garmin stages, asleep and awake are estimated from the sound monitor's activity per minute (seconds more than 8 dB above the room's baseline; see [sound-monitoring.md](sound-monitoring.md#activity)):
+When a night has no Garmin stages, asleep and awake are estimated from the sound monitor's activity per minute (seconds more than 12 dB above the room's baseline; see [sound-monitoring.md](sound-monitoring.md#activity)):
 
-- A minute with **3 or more active seconds** is **awake** (`SoundConfig.estimateAwakeActiveSeconds`).
-- A run of **20 or more consecutive quiet minutes** is **asleep** (`estimateMinQuietMinutes`), the whole run included. Quiet runs shorter than that count as awake: you haven't settled yet.
+- A minute with **5 or more active seconds** is **restless** (`SoundConfig.estimateAwakeActiveSeconds`); fewer is quiet.
+- **Falling asleep** takes a run of **10 or more consecutive quiet minutes** (`estimateMinQuietMinutes`); the whole run counts as asleep. Every minute before that is awake.
+- **Once asleep**, each quiet minute is asleep and each restless minute awake, so a stir costs only its own minutes. (Wake-ups still need 2 minutes or more to count; see below.)
+- After **15 restless minutes in a row** (`estimateResettleMinutes`) you're awake again, and falling back asleep needs the 10 quiet minutes again. A gap of 15 minutes or more does the same.
 - **Missing minutes leave a gap** (for example while the service wasn't running). Gaps count as neither asleep nor awake, so they lower efficiency rather than inventing sleep.
 - Asleep segments are `UNKNOWN` (asleep, stage not known): there's **no deep or REM estimate**, so the score spreads that part's points over the others. Segments are merged where they touch and trimmed to the taps.
 
-The thresholds are starting points, to be tuned against Garmin nights once there are some to compare.
+**Why it works this way (first overnight test, 2026-11-05).** The first rule needed 20 quiet minutes after *every* restless minute, and counted 8 dB with 3 active seconds as restless. On the night of 4–5 November it gave 1 h 43 min asleep. Garmin, for the same night, gave 7 h 1 min from 22:59 with one 4-minute wake. The sound monitor heard plenty during Garmin's deep and light sleep (5 % of all seconds cleared 8 dB), so sound is a weak sign of being awake: only louder, longer noise should count. Against Garmin's stages minute by minute, these settings (12 dB, 5 s, 10 quiet minutes) gave 6 h 42 min from 22:57, with 91 % of minutes agreeing; the old ones gave 59 %. That's one night: retune when more Garmin nights are in. Garmin's stages always win when they exist.
 
 ## Night metrics (`NightMetrics.of`)
 

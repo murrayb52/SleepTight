@@ -66,7 +66,7 @@ fun CreditsScreen(onBack: () -> Unit) {
         Text(stringResource(R.string.credits_intro), style = MaterialTheme.typography.bodyLarge, color = Palette.TextSoft)
 
         SectionLabel(stringResource(R.string.credits_sounds))
-        AlarmSound.entries.mapNotNull { s -> s.credit?.let { s to it } }.forEach { (sound, credit) ->
+        AlarmSound.entries.map { it to it.credit }.forEach { (sound, credit) ->
             Panel {
                 Text(stringResource(sound.label), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.credits_sound_line, credit.title, credit.author), style = MaterialTheme.typography.bodyMedium, color = Palette.TextSoft)

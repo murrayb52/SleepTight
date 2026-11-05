@@ -30,7 +30,7 @@ class ScoreNightTest {
         return (0 until seconds).map { s ->
             val minute = s / 60
             val loud = minute < restless || minute >= seconds / 60 - restless
-            LevelSample(bed.plusSeconds(s), if (loud && s % 60 < 10) 12.0 else 0.0)
+            LevelSample(bed.plusSeconds(s), if (loud && s % 60 < 10) 15.0 else 0.0)
         }
     }
 

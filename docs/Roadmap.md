@@ -11,8 +11,8 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Redesign**: night-sky look, bottom nav (Sleep · History · Profile, hidden in bed), twinkling stars, arc score dials | [ui.md](ui.md) |
 | **Editable alarm**: wake-by wheel and window length on the Sleep tab, on/off chip | [ui.md](ui.md#sleep-tab-before-bed) |
 | **Bedside check** at the bed tap (charger, nightstand, mic towards you), with Don't show again | [ui.md](ui.md#bedside-check) |
-| **Alarm screen**: a very slow sunrise while ringing, swipe up to snooze, Stop sweeps to day with the night so far and an I'm up button (a separate tap) | [ui.md](ui.md#alarm-screen) |
-| **Alarm sounds**: the generated chime plus five CC0 Freesound recordings (birdsong, piano, two kalimbas, music box), chosen and previewed in Profile | [alarm.md](alarm.md#sounds) |
+| **Alarm screen**: a very slow sunrise while ringing, swipe up to snooze, press-and-hold I'm up silences the alarm and ends the night, then sweeps to day with last night's summary | [ui.md](ui.md#alarm-screen) |
+| **Alarm sounds**: four CC0 Freesound recordings (birdsong by default, piano, two kalimbas), chosen and previewed in Profile. The chime and music box were removed as too startling | [alarm.md](alarm.md#sounds) |
 | **Credits in the app**: Profile → About lists every bundled sound and the typeface, with links and the font's licence text | [ui.md](ui.md#profile), [ASSETS.md](../ASSETS.md) |
 | **A sleep score for every night**: from Garmin stages when there are some, otherwise estimated from overnight sound; breakdown with the measurements behind each part and a sleep-stage chart | [metrics.md](metrics.md#scoring-in-the-app), [ui.md](ui.md#one-night) |
 | **Garmin via Health Connect**: sleep stages and heart rate from Garmin Connect only, trimmed to the taps; connect in Profile; retried after syncs; nights without Garmin are estimated from sound | [garmin.md](garmin.md) |
@@ -22,8 +22,8 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
 | **Bed and wake taps** define each night. A double tap can't open two nights, and a night left open 16 h prompts for the real wake time | [nights.md](nights.md) |
 | **Overnight sound monitoring**: relative sound levels once a second, noise events, activity per minute. Levels only, never audio | [sound-monitoring.md](sound-monitoring.md) |
-| **Smart alarm** in a wake window (default 05:45–06:15). It rings early when you stir, otherwise at the end of the window. A generated chime rises from 10 % to 100 % over 60 s, with no vibration, over the lock screen. On/off switch on Home | [alarm.md](alarm.md) |
-| **Shrinking snoozes**: 9 → 7 → 5 → 3 → 2 minutes, at most 5, then only Stop. Every snooze is counted | [alarm.md](alarm.md#snooze-and-dismiss) |
+| **Smart alarm** in a wake window (default 05:45–06:15). It rings early when you stir, otherwise at the end of the window. The sound rises from 10 % to 100 % over 60 s, with no vibration, over the lock screen. On/off switch on Home | [alarm.md](alarm.md) |
+| **Shrinking snoozes**: 9 → 7 → 5 → 3 → 2 minutes, at most 5, then only I'm up. Every snooze is counted | [alarm.md](alarm.md#snooze-and-dismiss) |
 | **Bedtime reminder** 30 minutes before the bedtime goal (default 21:30 for 22:00). Skipped once you're in bed | [alarm.md](alarm.md#bedtime-reminder) |
 | **Sleep score maths** (0–100 with breakdown), night metrics and regularity, unit tested. Not shown in the app until there's sleep data (step 5) and a report (step 6) | [metrics.md](metrics.md) |
 | Denial paths for microphone, notifications, battery restrictions (with Samsung advice), exact alarms, full-screen alarms and alarm volume | each page above |
@@ -36,6 +36,10 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 10. Overnight test on the phone, then fixes
 
 ## Agreed, not built yet
+
+- **A better sleep model from sound (investigation, started 2026-11-05).** The threshold estimate disagreed badly with Garmin on the first night: much of the noise was made in deep sleep. Plan: collect 1–4 weeks of nights with the per-second measured level, peak and three frequency bands, plus screen on/off/unlock events, alongside Garmin's stages (all stored since database version 5; see [sound-monitoring.md](sound-monitoring.md#what-each-stored-second-holds)). Then pull the database, graph sound against Garmin, and build a model from the data rather than assumptions, for example testing hysteresis (it may take more noise to wake you than to keep you awake). Data comes off the phone over `adb` until JSON export (step 9). Don't retune `SoundConfig` from single nights in the meantime.
+- **Mic calibration to dB SPL**: a few minutes beside a sound-meter app gives the S21's offset from dBFS, so the Sleep screen can show the room against WHO's 40 dB guideline.
+- **Recordings of noise events** only if the band levels prove too coarse and an actual classifier is wanted (the user's call, 2026-11-05).
 
 - **Opt-in loud-moment playback**: the loudest 5 short clips per night, kept for 7 nights, with a hard size cap. It's the one planned exception to "never store audio". Spec in the [v1 plan's "Later" list](plan/2026-11-04-v1-build-plan.md#later-not-v1-but-design-for-it).
 

@@ -44,6 +44,35 @@ data class SoundSample(
     val timestamp: Long,
     /** dB relative to the rolling baseline. */
     val dbRelative: Float,
+    // The second as measured, kept for later analysis (from database version 5, 2026-11-05; null in
+    // older nights). All dBFS: relative to the loudest the mic can report, not calibrated dB SPL.
+    /** RMS level of the whole second. */
+    @ColumnInfo(defaultValue = "NULL") val dbfs: Float? = null,
+    /** The loudest single sample in the second. */
+    @ColumnInfo(defaultValue = "NULL") val peakDbfs: Float? = null,
+    /** Level below 300 Hz (thumps, movement, snoring's rumble). */
+    @ColumnInfo(defaultValue = "NULL") val lowDbfs: Float? = null,
+    /** Level from 300 to 2,000 Hz (most of the voice range). */
+    @ColumnInfo(defaultValue = "NULL") val midDbfs: Float? = null,
+    /** Level above 2,000 Hz (rustling, hiss). */
+    @ColumnInfo(defaultValue = "NULL") val highDbfs: Float? = null,
+)
+
+/** What the screen did during a night: a strong sign of being awake, for later analysis. */
+enum class ScreenEventType { ON, OFF, UNLOCKED }
+
+@Entity(
+    tableName = "screen_events",
+    indices = [Index("nightId")],
+    foreignKeys = [
+        ForeignKey(entity = Night::class, parentColumns = ["id"], childColumns = ["nightId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class ScreenEvent(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val nightId: Long,
+    val timestamp: Long,
+    val type: ScreenEventType,
 )
 
 @Entity(

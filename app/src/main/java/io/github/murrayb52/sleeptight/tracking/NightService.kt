@@ -3,8 +3,10 @@ package io.github.murrayb52.sleeptight.tracking
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.media.AudioFormat
@@ -17,15 +19,17 @@ import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import io.github.murrayb52.sleeptight.SleepTightApplication
+import io.github.murrayb52.sleeptight.data.ScreenEvent
+import io.github.murrayb52.sleeptight.data.ScreenEventType
 import io.github.murrayb52.sleeptight.data.isOpen
 import io.github.murrayb52.sleeptight.metrics.LevelAccumulator
 import io.github.murrayb52.sleeptight.metrics.LevelSample
 import io.github.murrayb52.sleeptight.metrics.SmartTrigger
 import io.github.murrayb52.sleeptight.metrics.SoundLevel
 import io.github.murrayb52.sleeptight.metrics.activityPerMinute
-import java.time.Instant
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.Problem
 import io.github.murrayb52.sleeptight.tracking.TrackingStatus.State
+import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -109,9 +113,10 @@ class NightService : Service() {
             fail(nightId, Problem.MIC_UNAVAILABLE)
             return@withContext
         }
+        val screen = registerScreenEvents(nightId)
         // Read in 100 ms chunks: each chunk updates the live display; ten make the stored second.
         val chunk = ShortArray(SAMPLE_RATE / CHUNKS_PER_SECOND)
-        val second = LevelAccumulator()
+        val second = LevelAccumulator(SAMPLE_RATE)
         var live: LiveLevel? = null
         try {
             audio.startRecording()
@@ -125,7 +130,8 @@ class NightService : Service() {
                 val chunkDbfs = second.add(chunk, filled)
                 if (second.samples >= SAMPLE_RATE) {
                     val secondStart = container.clock.instant().minusSeconds(1)
-                    live = recorder.onLevel(secondStart, second.dbfs())
+                    val features = second.features()
+                    live = recorder.onLevel(secondStart, features.dbfs, features)
                     second.reset()
                     smartAlarm.check(recorder)
                 }
@@ -141,8 +147,38 @@ class NightService : Service() {
         } finally {
             audio.stop()
             audio.release()
+            unregisterReceiver(screen)
             withContext(NonCancellable) { recorder.flush() }
         }
+    }
+
+    /**
+     * Logs the screen turning on, off and being unlocked while the night is tracked: picking the
+     * phone up is a strong sign of being awake, for comparing against sound and Garmin later.
+     * Only the time and the kind of event are kept.
+     */
+    private fun registerScreenEvents(nightId: Long): BroadcastReceiver {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val type = when (intent.action) {
+                    Intent.ACTION_SCREEN_ON -> ScreenEventType.ON
+                    Intent.ACTION_SCREEN_OFF -> ScreenEventType.OFF
+                    Intent.ACTION_USER_PRESENT -> ScreenEventType.UNLOCKED
+                    else -> return
+                }
+                val at = container.clock.millis()
+                container.appScope.launch {
+                    container.database.screenEventDao().insert(ScreenEvent(nightId = nightId, timestamp = at, type = type))
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        return receiver
     }
 
     /**

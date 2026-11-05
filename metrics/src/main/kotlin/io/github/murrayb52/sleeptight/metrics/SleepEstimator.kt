@@ -6,9 +6,13 @@ import java.time.Instant
 /**
  * Estimates asleep or awake from activity per minute, for nights without Garmin data.
  *
- * - A minute with at least [SoundConfig.estimateAwakeActiveSeconds] active seconds is awake.
- * - Consecutive quiet minutes count as asleep only when the run lasts at least
- *   [SoundConfig.estimateMinQuietMinutes]; shorter quiet runs count as awake (not settled yet).
+ * - A minute with at least [SoundConfig.estimateAwakeActiveSeconds] active seconds is restless.
+ * - **Falling asleep** takes a run of at least [SoundConfig.estimateMinQuietMinutes] quiet minutes;
+ *   the whole run counts as asleep. Until then, every minute is awake.
+ * - **Once asleep**, quiet minutes are asleep and restless minutes awake, so a stir costs only
+ *   its own minutes.
+ * - After [SoundConfig.estimateResettleMinutes] restless minutes in a row, you're awake again, and
+ *   falling back asleep needs the quiet run again. A gap that long does the same.
  * - Minutes with no data (for example while the service wasn't running) leave a gap.
  *
  * Asleep segments use [Stage.UNKNOWN] (asleep, stage not known): there's no deep or REM estimate.
@@ -23,28 +27,33 @@ object SleepEstimator {
             .sortedBy { it.minuteStart }
         if (minutes.isEmpty()) return emptyList()
 
-        // Split into runs of consecutive minutes (a missing minute ends a run).
-        val runs = mutableListOf<MutableList<MinuteActivity>>()
-        for (m in minutes) {
-            val last = runs.lastOrNull()?.lastOrNull()
-            if (last != null && last.minuteStart.plus(MINUTE) == m.minuteStart) runs.last() += m else runs += mutableListOf(m)
-        }
+        val asleep = BooleanArray(minutes.size)
+        var settled = false
+        var quietRun = 0
+        var restlessRun = 0
+        minutes.forEachIndexed { i, m ->
+            val missing = if (i == 0) 0L else Duration.between(minutes[i - 1].minuteStart, m.minuteStart).toMinutes() - 1
+            if (missing >= config.estimateResettleMinutes) settled = false
+            if (missing > 0) quietRun = 0
 
-        val raw = mutableListOf<SleepSegment>()
-        for (run in runs) {
-            // Within a run, group quiet stretches and decide each one by its length.
-            var i = 0
-            while (i < run.size) {
-                val quiet = run[i].activeSeconds < config.estimateAwakeActiveSeconds
-                var j = i
-                while (j < run.size && (run[j].activeSeconds < config.estimateAwakeActiveSeconds) == quiet) j++
-                val stage = if (quiet && j - i >= config.estimateMinQuietMinutes) Stage.UNKNOWN else Stage.AWAKE
-                raw += SleepSegment(run[i].minuteStart, run[j - 1].minuteStart.plus(MINUTE), stage)
-                i = j
+            if (m.activeSeconds >= config.estimateAwakeActiveSeconds) {
+                quietRun = 0
+                restlessRun++
+                if (restlessRun >= config.estimateResettleMinutes) settled = false
+            } else {
+                restlessRun = 0
+                quietRun++
+                if (settled) {
+                    asleep[i] = true
+                } else if (quietRun >= config.estimateMinQuietMinutes) {
+                    settled = true
+                    for (k in i - quietRun + 1..i) asleep[k] = true
+                }
             }
         }
 
-        return raw
+        return minutes
+            .mapIndexed { i, m -> SleepSegment(m.minuteStart, m.minuteStart.plus(MINUTE), if (asleep[i]) Stage.UNKNOWN else Stage.AWAKE) }
             .fold(mutableListOf<SleepSegment>()) { acc, s ->
                 val prev = acc.lastOrNull()
                 if (prev != null && prev.stage == s.stage && prev.end == s.start) acc[acc.lastIndex] = prev.copy(end = s.end) else acc += s

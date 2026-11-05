@@ -21,7 +21,7 @@ class CreditsScreenTest {
     @Test
     fun everyBundledSoundIsCredited() {
         show()
-        listOf("F1tz", "f-r-a-g-i-l-e", "bassimat", "Tetoszka", "thulitt").forEach { author ->
+        listOf("F1tz", "f-r-a-g-i-l-e", "bassimat", "Tetoszka").forEach { author ->
             compose.onNodeWithText("by $author", substring = true).performScrollTo().assertIsDisplayed()
         }
     }

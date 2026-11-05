@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +33,8 @@ import io.github.murrayb52.sleeptight.ui.theme.Palette
 /**
  * A scrolling wheel of [values] (which wraps round), showing three rows with the middle one
  * selected. [onSelected] fires only after the user scrolls and the wheel settles, never just for
- * being shown. [nearest] picks the starting row when [selected] isn't one of [values].
+ * being shown; [onCentred] follows the row nearest the middle as it moves, for live previews.
+ * [nearest] picks the starting row when [selected] isn't one of [values].
  */
 @Composable
 fun <T> WheelPicker(
@@ -45,12 +48,21 @@ fun <T> WheelPicker(
     modifier: Modifier = Modifier,
     rowHeight: Dp = 64.dp,
     nearest: (List<T>, T) -> Int = { list, value -> list.indexOf(value).coerceAtLeast(0) },
+    onCentred: (T) -> Unit = {},
 ) {
     // A long list that repeats the values, starting in the middle, so it scrolls round in both directions.
     val repeats = 200
     val startIndex = remember(values) { values.size * (repeats / 2) + nearest(values, selected) }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = startIndex - 1)
-    val centred by remember { derivedStateOf { state.firstVisibleItemIndex + 1 } }
+    // The row nearest the middle, also mid-scroll, so the big style stays in the selection box.
+    val rowPx = with(LocalDensity.current) { rowHeight.toPx() }
+    val centred by remember(rowPx) {
+        derivedStateOf { state.firstVisibleItemIndex + 1 + if (state.firstVisibleItemScrollOffset > rowPx / 2) 1 else 0 }
+    }
+
+    LaunchedEffect(state, values) {
+        snapshotFlow { centred }.collect { onCentred(values[it % values.size]) }
+    }
 
     LaunchedEffect(state, values) {
         var scrolled = false
@@ -93,6 +105,9 @@ fun <T> WheelPicker(
                         label(values[i % values.size]),
                         style = if (i == centred) selectedStyle else otherStyle,
                         textAlign = TextAlign.Center,
+                        // A style taller than the row (64 sp numerals) would be pushed down; let it
+                        // overflow evenly so the digits sit in the middle of the selection box.
+                        modifier = Modifier.wrapContentHeight(unbounded = true),
                     )
                 }
             }

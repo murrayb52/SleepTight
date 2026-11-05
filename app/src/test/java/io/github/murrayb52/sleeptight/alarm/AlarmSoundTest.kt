@@ -5,13 +5,15 @@ import org.junit.Test
 
 class AlarmSoundTest {
     @Test
-    fun `no stored sound means the chime`() {
-        assertEquals(AlarmSound.CHIME, AlarmSound.of(null))
+    fun `no stored sound means birdsong`() {
+        assertEquals(AlarmSound.BIRDSONG, AlarmSound.of(null))
     }
 
     @Test
-    fun `an unknown key falls back to the chime`() {
-        assertEquals(AlarmSound.CHIME, AlarmSound.of("deleted_sound"))
+    fun `removed sounds and unknown keys fall back to birdsong`() {
+        // The chime was stored as null; the music box as "music_box". Both were removed on 2026-11-05.
+        assertEquals(AlarmSound.BIRDSONG, AlarmSound.of("music_box"))
+        assertEquals(AlarmSound.BIRDSONG, AlarmSound.of("deleted_sound"))
     }
 
     @Test
@@ -20,21 +22,16 @@ class AlarmSoundTest {
     }
 
     @Test
-    fun `keys are unique and only the chime is generated`() {
+    fun `keys are unique`() {
         assertEquals(AlarmSound.entries.size, AlarmSound.entries.map { it.key }.toSet().size)
-        assertEquals(listOf(AlarmSound.CHIME), AlarmSound.entries.filter { it.raw == null })
     }
 
     @Test
-    fun `every bundled sound is credited, and only bundled sounds`() {
+    fun `every sound is credited to its Freesound author`() {
         AlarmSound.entries.forEach { sound ->
-            if (sound.raw == null) {
-                assertEquals(null, sound.credit)
-            } else {
-                val credit = requireNotNull(sound.credit) { "$sound has no credit" }
-                assert(credit.author.isNotBlank() && credit.title.isNotBlank())
-                assert(credit.url.startsWith("https://freesound.org/people/${credit.author}/sounds/")) { credit.url }
-            }
+            val credit = sound.credit
+            assert(credit.author.isNotBlank() && credit.title.isNotBlank())
+            assert(credit.url.startsWith("https://freesound.org/people/${credit.author}/sounds/")) { credit.url }
         }
     }
 }

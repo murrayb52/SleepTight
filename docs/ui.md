@@ -12,16 +12,18 @@ How the app is laid out and how each screen behaves. Code: `app/.../ui/` (`Sleep
 
 ## Navigation
 
-A bottom bar with **Sleep · History · Profile**. It's **hidden while you're in bed** (nothing to fiddle with at night) and on a night's page.
+A bottom bar with **Sleep · History · Profile**. Above it, a small card appears when Garmin has rewritten a recent night ("Garmin updated Wed 4 Nov: score 74 → 78"): tap to open the night, swipe either way to dismiss. See [garmin.md](garmin.md#when-it-runs). It's **hidden while you're in bed** (nothing to fiddle with at night) and on a night's page.
 
 ## Sleep tab, before bed
 
+Everything fits on one screen without scrolling (checked at the S21's density, 480 dpi), unless setup warnings are showing. The last-night row and the window chip were removed for this on 2026-11-05 (the window length is in Profile, past nights in History); the bedtime goal stayed, as it fits.
+
 - Date and greeting, a crescent moon, and the bedtime goal with the reminder time.
 - Setup warnings, only when needed: battery restrictions (with Samsung advice), exact alarms, alarm volume at 0, full-screen alarm permission, notifications.
-- **Nothing is set until Going to bed.** The wheel and window only choose the times: the bed tap arms the alarm for them (and the text says so). To skip the alarm for a night, tap the alarm line on the in-bed screen.
-- **Wake me by**: a wheel in 5-minute steps that wraps round midnight. It saves only after you scroll it and it settles, never just for being shown, and a stored time off the 5-minute grid is shown at the nearest step. The window keeps its length and ends at the chosen time.
-- **Window chip** (15/20/30/45/60 min).
-- **Going to bed** (amber), then **Last night** with its dial, which opens that night.
+- **Nothing is set until Going to bed.** The wheel only chooses the time: the bed tap arms the alarm, and one line says so ("Alarm between 05:45 and 06:15, set when you tap Going to bed. Rings early if you stir."). To skip the alarm for a night, tap the alarm line on the in-bed screen.
+- **Wake me by**: a wheel in 5-minute steps that wraps round midnight. It saves only after you scroll it and it settles, never just for being shown, and a stored time off the 5-minute grid is shown at the nearest step. The window keeps its length and ends at the chosen time. The big style always marks the row nearest the selection box, even mid-scroll, and the alarm sentence follows the wheel as it turns rather than after the save. Numerals taller than the row overflow evenly, so they sit in the middle of the box.
+- The alarm sentence: "Gently wakes you between 05:45 and 06:15, as you start to stir. Set when you tap Going to bed."
+- **Going to bed** (amber).
 
 ## Bedside check
 
@@ -33,7 +35,7 @@ Near-black sky with twinkling stars and no nav bar. From the top:
 - the listening pill
 - a big clock
 - in bed since / how long
-- the alarm row (tap to turn tonight's alarm off or on; while ringing or snoozed, **Stop alarm** and **Snooze**)
+- the alarm row (tap to turn tonight's alarm off or on; while ringing, **Snooze**). The press-and-hold I'm up below stops a ringing or snoozed alarm and ends the night
 - the noise panel: a strip from the bed tap to now with a tick per event, and the latest events
 - a gentle wave whose height follows the live level: the service publishes a display level every **100 ms** (the stored level stays once a second), the height eases towards it over 300 ms and the wave flows continuously, so it moves smoothly rather than jumping each second
 
@@ -43,8 +45,8 @@ Near-black sky with twinkling stars and no nav bar. From the top:
 
 Shown over the lock screen when the alarm rings.
 
-- **Sunrise**: the sky starts as night and very slowly brightens through violet and ember, with the sun rising from below the bottom edge. It takes the full 10 minutes an alarm can ring to reach dawn. Full day only comes with Stop.
-- **Stop alarm** is the amber button. It only silences the alarm; **I'm up stays a separate tap** (the user's choice, 2026-11-04). The sky sweeps to full day in 1.2 s and fades into the **morning summary**: "Good morning", the night so far (dial, time in bed, noise events, snoozes, bed → now), with an amber **I'm up** and **Later**. After I'm up, it shows the finished night with **See the night** and **Done**.
+- **Sunrise**: the sky starts as night and very slowly brightens through violet and ember, with the sun rising from below the bottom edge. It takes the full 10 minutes an alarm can ring to reach dawn. Full day only comes with I'm up.
+- **I'm up** is pressed and held (1.2 s, filling with amber, like I'm up on Tonight): it silences the alarm **and ends the night** (2026-11-05; until then Stop and I'm up were separate taps, which proved confusing). The sky sweeps to full day in 1.2 s and fades into the **morning summary**: "Good morning", "Here's last night", the dial ("Working out the score…" until it's ready), time in bed, noise events, snoozes and bed → wake, with **See the night** and **Done**.
 - **Swipe up anywhere to snooze.** The screen follows your finger, and a swipe of 140 dp or more snoozes. Snooze lengths are never shown (they're baked in; see [alarm.md](alarm.md)). Five marks show snoozes used. After 5 snoozes the swipe does nothing and the screen says "No snoozes left. Time to get up." Screen readers get a Snooze action.
 
 ## History
@@ -70,4 +72,4 @@ All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings
 - **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds))
 - **Reminders**: bedtime reminder and bedside check switches
 - **Data**: Garmin and export, both coming soon
-- **About**: **Credits and licences**, a page crediting each alarm sound (original title, author, CC0, a link to Freesound) and the Outfit typeface (with its full SIL Open Font License text), and noting that the chime and the bedside illustration were made for the app
+- **About**: **Credits and licences**, a page crediting each alarm sound (original title, author, CC0, a link to Freesound) and the Outfit typeface (with its full SIL Open Font License text), and noting that the bedside illustration was made for the app

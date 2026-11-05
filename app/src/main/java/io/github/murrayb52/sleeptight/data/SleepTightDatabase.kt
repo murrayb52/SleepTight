@@ -13,10 +13,11 @@ import androidx.room.RoomDatabase
         NoiseEvent::class,
         SleepStageSegment::class,
         HeartRateSample::class,
+        ScreenEvent::class,
         CaffeineEntry::class,
         Settings::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         // 1 → 2: Settings.alarmEnabled (defaults to on).
@@ -25,6 +26,9 @@ import androidx.room.RoomDatabase
         AutoMigration(from = 2, to = 3),
         // 3 → 4: Settings.bedsideCheckEnabled (defaults to on).
         AutoMigration(from = 3, to = 4),
+        // 4 → 5: measured level, peak and band levels on sound_samples (null for older nights), and
+        // screen_events. Added for the sound-model investigation (2026-11-05).
+        AutoMigration(from = 4, to = 5),
     ],
 )
 abstract class SleepTightDatabase : RoomDatabase() {
@@ -33,6 +37,7 @@ abstract class SleepTightDatabase : RoomDatabase() {
     abstract fun noiseEventDao(): NoiseEventDao
     abstract fun sleepStageSegmentDao(): SleepStageSegmentDao
     abstract fun heartRateSampleDao(): HeartRateSampleDao
+    abstract fun screenEventDao(): ScreenEventDao
     abstract fun caffeineEntryDao(): CaffeineEntryDao
     abstract fun settingsDao(): SettingsDao
 

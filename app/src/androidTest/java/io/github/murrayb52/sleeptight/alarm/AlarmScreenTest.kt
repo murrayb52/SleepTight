@@ -22,7 +22,6 @@ class AlarmScreenTest {
     val compose = createComposeRule()
 
     private var snoozes = 0
-    private var stops = 0
     private var done = 0
     private var seen: Long? = null
     private var ups = 0
@@ -37,10 +36,9 @@ class AlarmScreenTest {
                 stopped = stopped,
                 morning = morning,
                 onSnooze = { snoozes++ },
-                onStop = { stops++ },
+                onImUp = { ups++ },
                 onSeeNight = { seen = it },
                 onDone = { done++ },
-                onImUp = { ups++ },
                 animate = false,
             )
         }
@@ -56,14 +54,27 @@ class AlarmScreenTest {
     }
 
     @Test
-    fun stopIsTheAmberButton() {
+    fun imUpMustBeHeld() {
         show(next = 9, used = 0)
-        compose.onNodeWithText("Stop alarm").performClick()
-        assertEquals(1, stops)
+        compose.onNodeWithText("Stop alarm").assertDoesNotExist()
+        compose.mainClock.autoAdvance = false
+        // A quick tap does nothing...
+        compose.onNodeWithTag("alarmImUp").performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithTag("alarmImUp").performTouchInput { up() }
+        compose.mainClock.advanceTimeBy(2_000)
+        assertEquals(0, ups)
+        // ...holding fills the button and then fires.
+        compose.onNodeWithTag("alarmImUp").performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(400)
+        compose.onNodeWithText("Keep holding…").assertExists()
+        compose.mainClock.advanceTimeBy(1_000)
+        assertEquals(1, ups)
+        compose.onNodeWithTag("alarmImUp").performTouchInput { up() }
     }
 
     @Test
-    fun afterFiveSnoozesOnlyStopIsLeft() {
+    fun afterFiveSnoozesOnlyImUpIsLeft() {
         show(next = null, used = 5)
         compose.onNodeWithText("No snoozes left", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Swipe up to snooze").assertDoesNotExist()
@@ -72,16 +83,17 @@ class AlarmScreenTest {
     }
 
     @Test
-    fun stopLeavesTheNightOpenAndOffersImUp() {
+    fun whileTheNightClosesTheSummaryOffersNoSecondImUp() {
+        // I'm up has been tapped; the database hasn't closed the night yet.
         val zone = ZoneId.of("Africa/Johannesburg")
         val morning = MorningUi(4, Instant.parse("2026-11-03T20:04:00Z"), wakeTapAt = null, zone = zone, noiseEvents = 2, snoozes = 0)
         show(next = 9, used = 0, stopped = true, morning = morning)
-        compose.onNodeWithText("Here's your night so far").assertIsDisplayed()
-        compose.onNodeWithText("See the night").assertDoesNotExist()
-        compose.onNodeWithText("I'm up").performClick()
-        assertEquals(1, ups)
-        compose.onNodeWithText("Later").performClick()
+        compose.onNodeWithText("Here's last night").assertIsDisplayed()
+        compose.onNodeWithText("I'm up").assertDoesNotExist()
+        compose.onNodeWithText("Later").assertDoesNotExist()
+        compose.onNodeWithText("Done").performClick()
         assertEquals(1, done)
+        assertEquals(0, ups)
     }
 
     @Test

@@ -35,22 +35,46 @@ class SleepEstimatorTest {
     }
 
     @Test
-    fun `restless minutes are awake and quiet runs of 20 or more are asleep`() {
-        val activity = minutes(*(run(10, 6) + run(300, 0) + run(5, 9) + run(15, 0) + run(3, 4)).toTypedArray())
-        val s = estimate(activity)
-        assertEquals(listOf(Stage.AWAKE, Stage.UNKNOWN, Stage.AWAKE), s.map { it.stage })
-        assertEquals(listOf(10L, 300L, 23L), s.map { it.minutes() }) // the 15 quiet minutes are too short to count
+    fun `falling asleep takes 10 quiet minutes`() {
+        // Restless, then 9 quiet minutes broken by a restless one, then settled.
+        val s = estimate(minutes(*(run(10, 9) + run(9, 0) + run(1, 9) + run(30, 0)).toTypedArray()))
+        assertEquals(listOf(Stage.AWAKE, Stage.UNKNOWN), s.map { it.stage })
+        assertEquals(listOf(20L, 30L), s.map { it.minutes() })
     }
 
     @Test
-    fun `exactly 20 quiet minutes count as sleep, 19 don't`() {
-        assertEquals(Stage.UNKNOWN, estimate(minutes(*(run(5, 5) + run(20, 0) + run(5, 5)).toTypedArray()))[1].stage)
-        assertEquals(listOf(Stage.AWAKE), estimate(minutes(*(run(5, 5) + run(19, 0) + run(5, 5)).toTypedArray())).map { it.stage })
+    fun `exactly 10 quiet minutes count as falling asleep, 9 don't`() {
+        assertEquals(Stage.UNKNOWN, estimate(minutes(*(run(5, 9) + run(10, 0) + run(5, 9)).toTypedArray()))[1].stage)
+        assertEquals(listOf(Stage.AWAKE), estimate(minutes(*(run(5, 9) + run(9, 0) + run(5, 9)).toTypedArray())).map { it.stage })
     }
 
     @Test
-    fun `fewer than 3 active seconds is still a quiet minute`() {
-        val s = estimate(minutes(*(run(30, 2) + run(30, 3)).toTypedArray()))
+    fun `once asleep, a restless minute is a brief stir and sleep resumes straight after`() {
+        // The first overnight test (2026-11-05) scored 1 h 43 min against Garmin's 7 h 1 min, because
+        // every stir needed 20 quiet minutes after it before sleep counted again. A stir now costs
+        // only its own minutes.
+        val s = estimate(minutes(*(run(30, 0) + run(1, 9) + run(10, 0) + run(2, 9) + run(30, 0)).toTypedArray()))
+        assertEquals(listOf(Stage.UNKNOWN, Stage.AWAKE, Stage.UNKNOWN, Stage.AWAKE, Stage.UNKNOWN), s.map { it.stage })
+        assertEquals(listOf(30L, 1L, 10L, 2L, 30L), s.map { it.minutes() })
+    }
+
+    @Test
+    fun `after 15 minutes awake, falling asleep again takes 10 quiet minutes`() {
+        val s = estimate(minutes(*(run(30, 0) + run(15, 9) + run(9, 0) + run(1, 9) + run(25, 0)).toTypedArray()))
+        assertEquals(listOf(Stage.UNKNOWN, Stage.AWAKE, Stage.UNKNOWN), s.map { it.stage })
+        assertEquals(listOf(30L, 25L, 25L), s.map { it.minutes() })
+    }
+
+    @Test
+    fun `14 minutes awake is still a wake-up within sleep`() {
+        val s = estimate(minutes(*(run(30, 0) + run(14, 9) + run(5, 0)).toTypedArray()))
+        assertEquals(listOf(Stage.UNKNOWN, Stage.AWAKE, Stage.UNKNOWN), s.map { it.stage })
+        assertEquals(listOf(30L, 14L, 5L), s.map { it.minutes() })
+    }
+
+    @Test
+    fun `fewer than 5 active seconds is still a quiet minute`() {
+        val s = estimate(minutes(*(run(30, 4) + run(30, 5)).toTypedArray()))
         assertEquals(listOf(Stage.UNKNOWN, Stage.AWAKE), s.map { it.stage })
     }
 
@@ -61,6 +85,21 @@ class SleepEstimatorTest {
         assertEquals(2, s.size)
         assertEquals(bed.plus(Duration.ofMinutes(60)), s[0].end)
         assertEquals(bed.plus(Duration.ofMinutes(90)), s[1].start)
+    }
+
+    @Test
+    fun `after a long gap, falling asleep again takes 10 quiet minutes`() {
+        val activity = minutes(*(run(30, 0) + List<Int?>(15) { null } + run(5, 0)).toTypedArray())
+        val s = SleepEstimator.estimate(activity, bed, bed.plus(Duration.ofMinutes(50)))
+        assertEquals(listOf(Stage.UNKNOWN, Stage.AWAKE), s.map { it.stage })
+    }
+
+    @Test
+    fun `a short gap doesn't interrupt sleep`() {
+        val activity = minutes(*(run(30, 0) + List<Int?>(2) { null } + run(5, 0)).toTypedArray())
+        val s = SleepEstimator.estimate(activity, bed, bed.plus(Duration.ofMinutes(37)))
+        assertEquals(listOf(Stage.UNKNOWN, Stage.UNKNOWN), s.map { it.stage })
+        assertEquals(listOf(30L, 5L), s.map { it.minutes() })
     }
 
     @Test
@@ -75,7 +114,7 @@ class SleepEstimatorTest {
 
     @Test
     fun `the estimate scores as an estimated night`() {
-        val activity = minutes(*(run(15, 6) + run(450, 0) + run(15, 6)).toTypedArray())
+        val activity = minutes(*(run(15, 9) + run(450, 0) + run(15, 9)).toTypedArray())
         val input = NightInput(bed, bed.plus(Duration.ofMinutes(480)), SleepEstimator.estimate(activity, bed, bed.plus(Duration.ofMinutes(480))), SleepDataSource.ESTIMATED)
         val m = NightMetrics.of(input)
         assertEquals(Duration.ofMinutes(450), m.totalSleep)

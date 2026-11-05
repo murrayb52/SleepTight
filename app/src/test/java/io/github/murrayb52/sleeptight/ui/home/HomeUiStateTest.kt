@@ -19,15 +19,14 @@ class HomeUiStateTest {
     private fun night(id: Long, bed: String, wake: String? = null) =
         Night(id = id, bedTapAt = at(bed).toEpochMilli(), wakeTapAt = wake?.let { at(it).toEpochMilli() }, zoneId = zone.id)
 
-    private fun build(open: Night?, last: Night? = null, now: String, dismissed: Long? = null) =
-        buildHomeUiState(open, last, at(now), zone, eightHours, dismissed)
+    private fun build(open: Night?, now: String, dismissed: Long? = null) =
+        buildHomeUiState(open, at(now), zone, eightHours, dismissed)
 
     @Test
-    fun `no nights yet shows neither an open night nor last night`() {
+    fun `no open night`() {
         val state = build(open = null, now = "2026-11-04T20:00")
         assertEquals(false, state.loading)
         assertNull(state.openNight)
-        assertNull(state.lastNight)
         assertNull(state.overduePrompt)
     }
 
@@ -36,12 +35,6 @@ class HomeUiStateTest {
         val state = build(open = night(1, "2026-11-03T22:00"), now = "2026-11-03T23:30")
         assertEquals(Duration.ofMinutes(90), state.openNight?.inBedFor)
         assertNull(state.overduePrompt)
-    }
-
-    @Test
-    fun `last night reports time in bed`() {
-        val state = build(open = null, last = night(1, "2026-11-03T22:10", "2026-11-04T06:05"), now = "2026-11-04T07:00")
-        assertEquals(Duration.ofMinutes(7 * 60 + 55), state.lastNight?.timeInBed)
     }
 
     @Test

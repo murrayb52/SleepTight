@@ -1,6 +1,7 @@
 package io.github.murrayb52.sleeptight.health
 
 import android.content.Context
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
@@ -31,8 +32,14 @@ class HealthConnectGarminSource(
         else -> if (client.permissionController.getGrantedPermissions().containsAll(PERMISSIONS)) SourceStatus.READY else SourceStatus.NEEDS_PERMISSION
     }
 
-    override suspend fun sleep(from: Instant, to: Instant): List<SleepSegment> =
-        readAll(SleepSessionRecord::class, from, to).flatMap { it.toSegments() }
+    override suspend fun sleep(from: Instant, to: Instant): List<SleepSegment> {
+        val sessions = readAll(SleepSessionRecord::class, from, to)
+        Log.i(TAG, "Sleep $from..$to from $origins: ${sessions.size} sessions")
+        sessions.forEach {
+            Log.i(TAG, "  ${it.metadata.dataOrigin.packageName} ${it.startTime}..${it.endTime} (${it.startZoneOffset}), ${it.stages.size} stages")
+        }
+        return sessions.flatMap { it.toSegments() }
+    }
 
     override suspend fun heartRate(from: Instant, to: Instant): List<HeartRatePoint> =
         readAll(HeartRateRecord::class, from, to).flatMap { r -> r.samples.map { HeartRatePoint(it.time, it.beatsPerMinute.toInt()) } }
@@ -56,6 +63,7 @@ class HealthConnectGarminSource(
     }
 
     companion object {
+        private const val TAG = "GarminSource"
         const val GARMIN_CONNECT = "com.garmin.android.apps.connectmobile"
 
         /** What SleepTight asks Health Connect for: reading sleep and heart rate, nothing else. */

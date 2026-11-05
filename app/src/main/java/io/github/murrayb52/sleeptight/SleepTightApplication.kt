@@ -23,10 +23,11 @@ class SleepTightApplication : Application() {
                 }
                 .collect { container.bedtimeReminders.schedule(it) }
         }
-        // Pick up Garmin data that synced since recent nights ended, then score any night that has
-        // no score yet (or one from an older scoring version)...
+        // Pick up Garmin data that synced (or was rewritten) since recent nights ended, then score
+        // any night that has no score yet (or one from an older scoring version)...
         container.appScope.launch {
-            container.garminImporter.importRecent()
+            val updates = container.garminImporter.importRecent()
+            if (updates.isNotEmpty()) container.garminUpdates.value = container.garminUpdates.value + updates
             container.nightScorer.rescoreStale()
         }
         // ...and rescore everything when the goals behind the score change (not on the first read).

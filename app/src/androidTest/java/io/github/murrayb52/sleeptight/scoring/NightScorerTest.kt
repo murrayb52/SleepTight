@@ -42,7 +42,7 @@ class NightScorerTest {
         val samples = (0 until 8 * 3600L).map { s ->
             val minute = s / 60
             val loud = (minute < 15 || minute >= 465) && s % 60 < 10
-            SoundSample(id, bed.plusSeconds(s).toEpochMilli(), if (loud) 12f else 0f)
+            SoundSample(id, bed.plusSeconds(s).toEpochMilli(), if (loud) 15f else 0f)
         }
         samples.chunked(5_000).forEach { db.soundSampleDao().insertAll(it) }
         return id

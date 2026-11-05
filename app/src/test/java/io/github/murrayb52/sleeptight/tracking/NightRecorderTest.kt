@@ -3,6 +3,7 @@ package io.github.murrayb52.sleeptight.tracking
 import io.github.murrayb52.sleeptight.data.NoiseEvent
 import io.github.murrayb52.sleeptight.data.SoundSample
 import io.github.murrayb52.sleeptight.metrics.NoiseChange
+import io.github.murrayb52.sleeptight.metrics.SecondFeatures
 import io.github.murrayb52.sleeptight.metrics.SoundLevel
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -105,9 +106,9 @@ class NightRecorderTest {
 
     @Test
     fun `activity per minute counts seconds above the activity threshold`() = runTest {
-        // Baseline -60; minute 0: 60 quiet seconds; minute 1: 5 seconds at +10 dB, the rest quiet.
+        // Baseline -60; minute 0: 60 quiet seconds; minute 1: 5 seconds at +14 dB, the rest quiet.
         feed(List(60) { -60.0 })
-        feed(List(5) { -50.0 } + List(55) { -60.0 }, from = 60)
+        feed(List(5) { -46.0 } + List(55) { -60.0 }, from = 60)
         assertEquals(listOf(0, 5), recorder.activity.map { it.activeSeconds })
     }
 
@@ -117,5 +118,17 @@ class NightRecorderTest {
         recorder.seedActivity(earlier)
         feed(List(3) { -60.0 })
         assertEquals(listOf(7, 0), recorder.activity.map { it.activeSeconds })
+    }
+
+    @Test
+    fun `each sample keeps the second as measured, for later analysis`() = runTest {
+        val features = SecondFeatures(dbfs = -52.0, peakDbfs = -30.0, lowDbfs = -55.0, midDbfs = -60.0, highDbfs = -70.0)
+        recorder.onLevel(t0, -60.0)
+        recorder.onLevel(t0.plusSeconds(1), features.dbfs, features)
+        recorder.flush()
+        val stored = store.samples.last()
+        assertEquals(8.0f, stored.dbRelative, 1e-4f) // still relative to the baseline
+        assertEquals(listOf(-52f, -30f, -55f, -60f, -70f), listOf(stored.dbfs, stored.peakDbfs, stored.lowDbfs, stored.midDbfs, stored.highDbfs))
+        assertEquals(-60f, store.samples.first().dbfs) // the level alone is kept even without features
     }
 }

@@ -31,13 +31,32 @@ For scoring, events are later grouped into **clusters** (within 5 min); see [met
 
 ## Activity
 
-`activityPerMinute` counts, per minute, the seconds more than **8 dB** above baseline. It's a rough movement proxy for the smart alarm (step 4) and the sleep estimate without Garmin (step 5). It's worked out from the stored samples rather than stored separately.
+`activityPerMinute` counts, per minute, the seconds more than **12 dB** above baseline (8 dB until 2026-11-05: on the first real night 5 % of all seconds cleared 8 dB while Garmin had the user soundly asleep). It's a rough movement proxy for the smart alarm (step 4) and the sleep estimate without Garmin (step 5). It's worked out from the stored samples rather than stored separately.
 
 All of these thresholds live in `SoundConfig`.
 
+## What each stored second holds
+
+Since database version 5 (2026-11-05), each row of `sound_samples` keeps the second as measured as well as the relative level, for the sound-model investigation (see the [Roadmap](Roadmap.md)). Older nights have nulls in the new columns. Everything is in dBFS (relative to the loudest the mic can report), **not calibrated dB SPL**: comparing with WHO's 40 dB needs a one-off calibration of the phone against a sound meter.
+
+| Column | What it is |
+|---|---|
+| `dbRelative` | the level minus the 20-minute median baseline (drives noise events, activity and the smart alarm) |
+| `dbfs` | the RMS level of the whole second |
+| `peakDbfs` | the loudest single sample: a sharp knock shows here even when the average is low |
+| `lowDbfs` | level below **300 Hz**: thumps, movement against the bed, snoring's rumble |
+| `midDbfs` | **300–2,000 Hz**: most of the voice range (talking, coughing) |
+| `highDbfs` | above **2,000 Hz**: rustling bedding, hiss |
+
+The bands are second-order Butterworth filters (`Biquad` in `Sound.kt`) run over the audio in memory, so still **no audio is stored**. The band edges are `SoundConfig.lowBandMaxHz` and `highBandMinHz`. Unit tests check that a 100 Hz, 800 Hz and 5 kHz tone each land in their own band.
+
+## Screen events
+
+While a night is tracked, `NightService` also logs the screen turning **on**, **off** and being **unlocked** (`screen_events`: time and type only). Picking the phone up is a strong sign of being awake, so these are labelled "awake" moments for the analysis. They aren't used in the score.
+
 ## Storage
 
-Samples are batched and written every **30 seconds**. A kill loses at most the last 30 seconds. Measured on the emulator, an 8-hour night is about **1.3 MB** (28,800 rows plus their index), so roughly 470 MB a year. That's acceptable for now. If it becomes a problem, older nights can be thinned to per-minute summaries without touching the scores, which only use noise events and activity.
+Samples are batched and written every **30 seconds**. A kill loses at most the last 30 seconds. Measured on the emulator before version 5, an 8-hour night was about **1.3 MB** (28,800 rows plus their index); the five measured columns add roughly 0.6 MB a night. That's acceptable for now. If it becomes a problem, older nights can be thinned to per-minute summaries without touching the scores, which only use noise events and activity.
 
 ## Tonight view
 

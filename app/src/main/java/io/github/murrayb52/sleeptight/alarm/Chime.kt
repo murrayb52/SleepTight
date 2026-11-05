@@ -7,8 +7,9 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * The built-in alarm sound, generated rather than bundled so the app needs no audio files: a
- * rising three-note bell (C6, E6, G6) that decays and repeats every 3 seconds.
+ * A generated alarm sound, so there's always something to ring with: a rising three-note bell
+ * (C6, E6, G6) that decays and repeats every 3 seconds. No longer offered as a choice (too bright
+ * to wake to); it only plays if the chosen recording can't.
  */
 object Chime {
     const val SAMPLE_RATE = 44_100

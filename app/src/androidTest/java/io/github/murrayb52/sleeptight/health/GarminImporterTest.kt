@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.murrayb52.sleeptight.data.Night
 import io.github.murrayb52.sleeptight.data.SleepTightDatabase
+import io.github.murrayb52.sleeptight.data.SleepStage
 import io.github.murrayb52.sleeptight.data.StageSource
 import io.github.murrayb52.sleeptight.metrics.SleepSegment
 import io.github.murrayb52.sleeptight.metrics.Stage
@@ -94,13 +95,33 @@ class GarminImporterTest {
     }
 
     @Test
-    fun recentNightsAwaitingGarminAreRetriedOnce() = runTest {
+    fun recentNightsAreImportedAndAnUnchangedNightIsLeftAlone() = runTest {
         val id = night()
         garmin.segments = listOf(SleepSegment(bed.plus(Duration.ofMinutes(10)), wake, Stage.LIGHT))
-        importer.importRecent()
+        assertTrue(importer.importRecent().isEmpty()) // a first import isn't an update
         assertTrue(db.nightDao().get(id)!!.garminImported)
-        val readsAfterFirst = garmin.reads
-        importer.importRecent() // already imported: not read again
-        assertEquals(readsAfterFirst, garmin.reads)
+        assertEquals(GarminImporter.Result.UNCHANGED, importer.import(id))
+        assertTrue(importer.importRecent().isEmpty())
+    }
+
+    @Test
+    fun aNightGarminRewritesIsReplacedAndReported() = runTest {
+        val id = night()
+        garmin.segments = listOf(SleepSegment(bed.plus(Duration.ofMinutes(10)), wake, Stage.LIGHT))
+        importer.import(id)
+        val before = ScoreCache.decode(db.nightDao().get(id)!!.scoreJson)?.total
+
+        // Garmin later splits the night into light and deep sleep.
+        garmin.segments = listOf(
+            SleepSegment(bed.plus(Duration.ofMinutes(10)), bed.plus(Duration.ofHours(3)), Stage.LIGHT),
+            SleepSegment(bed.plus(Duration.ofHours(3)), wake, Stage.DEEP),
+        )
+        val updates = importer.importRecent()
+
+        assertEquals(listOf(id), updates.map { it.nightId })
+        assertEquals(before, updates.single().scoreBefore)
+        assertEquals(ScoreCache.decode(db.nightDao().get(id)!!.scoreJson)?.total, updates.single().scoreAfter)
+        val stages = db.sleepStageSegmentDao().getForNight(id).filter { it.source == StageSource.GARMIN }.map { it.stage }
+        assertEquals(listOf(SleepStage.LIGHT, SleepStage.DEEP), stages)
     }
 }

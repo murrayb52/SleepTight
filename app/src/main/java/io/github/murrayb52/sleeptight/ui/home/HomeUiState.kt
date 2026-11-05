@@ -22,7 +22,6 @@ data class HomeUiState(
     /** Zone used to show times: the device's current zone. */
     val zone: ZoneId = ZoneId.systemDefault(),
     val openNight: OpenNightUi? = null,
-    val lastNight: LastNightUi? = null,
     val overduePrompt: OverduePrompt? = null,
     /** Overnight sound monitoring; only meaningful while a night is open. */
     val tracking: TrackingStatus = TrackingStatus(),
@@ -86,16 +85,6 @@ data class DeviceState(
 
 data class OpenNightUi(val nightId: Long, val bedTapAt: Instant, val inBedFor: Duration)
 
-data class LastNightUi(
-    val bedTapAt: Instant,
-    val wakeTapAt: Instant,
-    val timeInBed: Duration,
-    val nightId: Long = 0,
-    val snoozes: Int = 0,
-    /** Null until there's sleep data to score (Garmin import or the activity estimate). */
-    val score: Int? = null,
-)
-
 /** Shown when the open night has been open for at least [OPEN_NIGHT_PROMPT_AFTER]. */
 data class OverduePrompt(
     val nightId: Long,
@@ -107,7 +96,6 @@ data class OverduePrompt(
 
 fun buildHomeUiState(
     openNight: Night?,
-    lastNight: Night?,
     now: Instant,
     zone: ZoneId,
     targetSleep: Duration,
@@ -117,15 +105,10 @@ fun buildHomeUiState(
         val bed = Instant.ofEpochMilli(it.bedTapAt)
         OpenNightUi(it.id, bed, Duration.between(bed, now).coerceAtLeast(Duration.ZERO))
     }
-    val last = lastNight?.wakeTapAt?.let { wake ->
-        val bed = Instant.ofEpochMilli(lastNight.bedTapAt)
-        val up = Instant.ofEpochMilli(wake)
-        LastNightUi(bed, up, Duration.between(bed, up), lastNight.id, lastNight.snoozeCount, ScoreCache.decode(lastNight.scoreJson)?.total)
-    }
     val prompt = open
         ?.takeIf { it.inBedFor >= OPEN_NIGHT_PROMPT_AFTER && it.nightId != promptDismissedForNightId }
         ?.let { OverduePrompt(it.nightId, it.bedTapAt, it.inBedFor, it.bedTapAt.plus(targetSleep).atZone(zone).toLocalTime()) }
-    return HomeUiState(loading = false, zone = zone, openNight = open, lastNight = last, overduePrompt = prompt)
+    return HomeUiState(loading = false, zone = zone, openNight = open, overduePrompt = prompt)
 }
 
 /**

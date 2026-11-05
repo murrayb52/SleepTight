@@ -2,7 +2,10 @@ package io.github.murrayb52.sleeptight.metrics
 
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.log10
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** Every overnight sound threshold, in one place. Levels are dB relative to the rolling baseline. */
@@ -15,12 +18,22 @@ data class SoundConfig(
     val minNoiseSeconds: Int = 1,
     /** Events closer together than this are merged into one. */
     val noiseMergeGap: Duration = Duration.ofSeconds(30),
-    /** A second this many dB above baseline (strictly) counts towards activity. */
-    val activityThresholdDb: Double = 8.0,
-    /** Sleep estimate: a minute with at least this many active seconds is awake... */
-    val estimateAwakeActiveSeconds: Int = 3,
-    /** ...and only a run of at least this many quiet minutes counts as asleep. */
-    val estimateMinQuietMinutes: Int = 20,
+    /**
+     * A second this many dB above baseline (strictly) counts towards activity. 8 dB was far too
+     * sensitive on a real phone: 5 % of a soundly slept night's seconds cleared it. 12 dB, with
+     * the values below, fitted Garmin best on the first overnight test (2026-11-05).
+     */
+    val activityThresholdDb: Double = 12.0,
+    /** Sleep estimate: a minute with at least this many active seconds is awake. */
+    val estimateAwakeActiveSeconds: Int = 5,
+    /** Falling asleep takes a run of at least this many quiet minutes (the whole run counts). */
+    val estimateMinQuietMinutes: Int = 10,
+    /** After this many minutes awake (or missing), falling asleep again needs the quiet run again. */
+    val estimateResettleMinutes: Int = 15,
+    /** Stored band levels: low is below this... */
+    val lowBandMaxHz: Double = 300.0,
+    /** ...high is above this, and mid is between. */
+    val highBandMinHz: Double = 2_000.0,
 )
 
 object SoundLevel {
@@ -41,12 +54,36 @@ object SoundLevel {
     }
 }
 
+/** One second of sound described by numbers only (no audio), all in dBFS. */
+data class SecondFeatures(
+    /** RMS level of the whole second: what the stored level was before 2026-11-05. */
+    val dbfs: Double,
+    /** The loudest single sample: a sharp knock shows here even when the second's average is low. */
+    val peakDbfs: Double,
+    /** Below [SoundConfig.lowBandMaxHz]: thumps, movement against the bed, snoring's rumble. */
+    val lowDbfs: Double,
+    /** Between the two: most of the voice range (talking, coughing). */
+    val midDbfs: Double,
+    /** Above [SoundConfig.highBandMinHz]: rustling bedding, hiss, sibilants. */
+    val highDbfs: Double,
+)
+
 /**
  * Builds one second's level from shorter chunks (for example 100 ms), so the live display can update
- * ten times a second while the stored level is still the RMS of the whole second.
+ * ten times a second while the stored level is still the RMS of the whole second. Alongside the
+ * level it keeps the peak and the level in three frequency bands ([features]). The band filters
+ * keep their state across seconds, as a continuous stream needs; [reset] only starts a new second.
  */
-class LevelAccumulator {
+class LevelAccumulator(sampleRate: Int = 16_000, config: SoundConfig = SoundConfig()) {
     private var sumSquares = 0.0
+    private var peak = 0
+    private var lowSum = 0.0
+    private var midSum = 0.0
+    private var highSum = 0.0
+    private val low = Biquad.lowPass(sampleRate, config.lowBandMaxHz)
+    private val midHigh = Biquad.highPass(sampleRate, config.lowBandMaxHz)
+    private val midLow = Biquad.lowPass(sampleRate, config.highBandMinHz)
+    private val high = Biquad.highPass(sampleRate, config.highBandMinHz)
     var samples = 0
         private set
 
@@ -54,8 +91,16 @@ class LevelAccumulator {
     fun add(chunk: ShortArray, count: Int = chunk.size): Double {
         var chunkSum = 0.0
         for (i in 0 until count) {
-            val s = chunk[i].toDouble()
+            val v = chunk[i].toInt()
+            val s = v.toDouble()
             chunkSum += s * s
+            if (kotlin.math.abs(v) > peak) peak = kotlin.math.abs(v)
+            val l = low.process(s)
+            lowSum += l * l
+            val m = midLow.process(midHigh.process(s))
+            midSum += m * m
+            val h = high.process(s)
+            highSum += h * h
         }
         sumSquares += chunkSum
         samples += count
@@ -65,14 +110,65 @@ class LevelAccumulator {
     /** The level (dBFS) of everything added since the last [reset]. */
     fun dbfs(): Double = levelOf(sumSquares, samples)
 
+    /** The level, peak and band levels of everything added since the last [reset]. */
+    fun features(): SecondFeatures = SecondFeatures(
+        dbfs = dbfs(),
+        peakDbfs = if (peak == 0) SoundLevel.FLOOR_DBFS else (20 * log10(peak.toDouble() / Short.MAX_VALUE)).coerceAtLeast(SoundLevel.FLOOR_DBFS),
+        lowDbfs = levelOf(lowSum, samples),
+        midDbfs = levelOf(midSum, samples),
+        highDbfs = levelOf(highSum, samples),
+    )
+
     fun reset() {
         sumSquares = 0.0
+        peak = 0
+        lowSum = 0.0
+        midSum = 0.0
+        highSum = 0.0
         samples = 0
     }
 
     private fun levelOf(sum: Double, n: Int): Double {
-        if (n <= 0 || sum == 0.0) return SoundLevel.FLOOR_DBFS
+        if (n <= 0 || sum < 1e-9) return SoundLevel.FLOOR_DBFS
         return (20 * log10(sqrt(sum / n) / Short.MAX_VALUE)).coerceAtLeast(SoundLevel.FLOOR_DBFS)
+    }
+}
+
+/** A second-order (12 dB per octave) Butterworth filter, from the Audio EQ Cookbook. */
+internal class Biquad private constructor(
+    private val b0: Double, private val b1: Double, private val b2: Double,
+    private val a1: Double, private val a2: Double,
+) {
+    private var x1 = 0.0
+    private var x2 = 0.0
+    private var y1 = 0.0
+    private var y2 = 0.0
+
+    fun process(x: Double): Double {
+        val y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2 = x1; x1 = x
+        y2 = y1; y1 = y
+        return y
+    }
+
+    companion object {
+        private const val Q = 0.7071067811865476 // Butterworth
+
+        fun lowPass(sampleRate: Int, hz: Double): Biquad {
+            val w = 2 * PI * hz / sampleRate
+            val alpha = sin(w) / (2 * Q)
+            val c = cos(w)
+            val a0 = 1 + alpha
+            return Biquad((1 - c) / 2 / a0, (1 - c) / a0, (1 - c) / 2 / a0, -2 * c / a0, (1 - alpha) / a0)
+        }
+
+        fun highPass(sampleRate: Int, hz: Double): Biquad {
+            val w = 2 * PI * hz / sampleRate
+            val alpha = sin(w) / (2 * Q)
+            val c = cos(w)
+            val a0 = 1 + alpha
+            return Biquad((1 + c) / 2 / a0, -(1 + c) / a0, (1 + c) / 2 / a0, -2 * c / a0, (1 - alpha) / a0)
+        }
     }
 }
 

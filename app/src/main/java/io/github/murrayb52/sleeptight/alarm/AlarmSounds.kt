@@ -14,12 +14,12 @@ import io.github.murrayb52.sleeptight.R
 data class SoundCredit(val title: String, val author: String, val url: String)
 
 /**
- * The alarm sounds. [key] is what `Settings.alarmSound` stores (null = the generated chime).
- * Every bundled recording carries its [credit]: CC0 sounds from Freesound. Titles and authors are
- * the originals, so they aren't translated.
+ * The alarm sounds. [key] is what `Settings.alarmSound` stores (null = [DEFAULT]). Every one is a
+ * bundled CC0 recording from Freesound with its [credit]. Titles and authors are the originals, so
+ * they aren't translated. The generated chime and the music box were removed (2026-11-05): their
+ * bright, ringing pitch startled the sleeper.
  */
-enum class AlarmSound(val key: String?, @StringRes val label: Int, @RawRes val raw: Int?, val credit: SoundCredit?) {
-    CHIME(null, R.string.sound_chime, null, null),
+enum class AlarmSound(val key: String, @StringRes val label: Int, @RawRes val raw: Int, val credit: SoundCredit) {
     BIRDSONG(
         "birdsong", R.string.sound_birdsong, R.raw.alarm_birdsong,
         SoundCredit("bird song", "F1tz", "https://freesound.org/people/F1tz/sounds/795995/"),
@@ -40,15 +40,14 @@ enum class AlarmSound(val key: String?, @StringRes val label: Int, @RawRes val r
         "kalimba", R.string.sound_kalimba, R.raw.alarm_kalimba,
         SoundCredit("kalimba - simple effect", "Tetoszka", "https://freesound.org/people/Tetoszka/sounds/542318/"),
     ),
-    MUSIC_BOX(
-        "music_box", R.string.sound_music_box, R.raw.alarm_music_box,
-        SoundCredit("Wien_bleibt_Wien.WAV", "thulitt", "https://freesound.org/people/thulitt/sounds/150025/"),
-    ),
     ;
 
     companion object {
-        /** The sound for a stored key; unknown or missing keys fall back to the chime. */
-        fun of(key: String?): AlarmSound = entries.firstOrNull { it.key == key } ?: CHIME
+        /** Used when nothing is chosen, and for keys of removed sounds (chime, music box). */
+        val DEFAULT = BIRDSONG
+
+        /** The sound for a stored key; unknown or missing keys fall back to [DEFAULT]. */
+        fun of(key: String?): AlarmSound = entries.firstOrNull { it.key == key } ?: DEFAULT
     }
 }
 
@@ -59,11 +58,13 @@ interface AlarmPlayer {
     fun release()
 
     companion object {
-        /** A player for [sound], falling back to the generated chime if the file can't be played. */
+        /**
+         * A player for [sound]. If the file can't be played, the generated chime takes over: it's
+         * no longer offered as a sound, but an alarm that rings is better than one that doesn't.
+         */
         fun create(context: Context, sound: AlarmSound): AlarmPlayer {
-            val raw = sound.raw ?: return ChimePlayer()
             return try {
-                RawSoundPlayer(context, raw)
+                RawSoundPlayer(context, sound.raw)
             } catch (e: Exception) {
                 Log.w("AlarmPlayer", "Couldn't play $sound; using the chime", e)
                 ChimePlayer()
@@ -103,7 +104,7 @@ private class RawSoundPlayer(context: Context, @RawRes raw: Int) : AlarmPlayer {
     }
 }
 
-/** The generated chime ([Chime]), looped with a static AudioTrack. */
+/** The generated chime ([Chime]), looped with a static AudioTrack. Only a fallback for a broken file. */
 private class ChimePlayer : AlarmPlayer {
     private val pcm = Chime.generate()
     private val track = AudioTrack.Builder()

@@ -68,9 +68,6 @@ class AlarmController(
 
     fun snooze() = context.startService(AlarmRingService.intent(context, AlarmRingService.ACTION_SNOOZE))
 
-    /** The user stopped the alarm from the Sleep tab. The night stays open until I'm up. */
-    fun stop() = context.startService(AlarmRingService.intent(context, AlarmRingService.ACTION_DISMISS))
-
     /** The smart trigger fired: ring now instead of at the end of the window. */
     fun ringNow(nightId: Long) = scheduler.scheduleRing(nightId, clock.instant().plusSeconds(1))
 

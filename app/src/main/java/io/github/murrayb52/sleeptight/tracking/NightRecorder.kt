@@ -6,6 +6,7 @@ import io.github.murrayb52.sleeptight.metrics.MinuteActivity
 import io.github.murrayb52.sleeptight.metrics.NoiseChange
 import io.github.murrayb52.sleeptight.metrics.NoiseEventDetector
 import io.github.murrayb52.sleeptight.metrics.RollingMedian
+import io.github.murrayb52.sleeptight.metrics.SecondFeatures
 import io.github.murrayb52.sleeptight.metrics.SoundConfig
 import io.github.murrayb52.sleeptight.metrics.SoundLevel
 import java.time.Instant
@@ -59,15 +60,25 @@ class NightRecorder(
 
     /**
      * Records the level of the second starting at [at]. The baseline is the median of the
-     * seconds *before* this one, so a loud second can't raise its own baseline.
+     * seconds *before* this one, so a loud second can't raise its own baseline. [features], when
+     * given, is stored with the sample as measured (level, peak and bands) for later analysis.
      */
-    suspend fun onLevel(at: Instant, dbfs: Double): LiveLevel {
+    suspend fun onLevel(at: Instant, dbfs: Double, features: SecondFeatures? = null): LiveLevel {
         val base = baseline.median ?: dbfs
         val relative = dbfs - base
         baseline.add(dbfs)
         silentSeconds = if (dbfs <= SoundLevel.FLOOR_DBFS) silentSeconds + 1 else 0
 
-        pending += SoundSample(nightId, at.toEpochMilli(), relative.toFloat())
+        pending += SoundSample(
+            nightId,
+            at.toEpochMilli(),
+            relative.toFloat(),
+            dbfs = dbfs.toFloat(),
+            peakDbfs = features?.peakDbfs?.toFloat(),
+            lowDbfs = features?.lowDbfs?.toFloat(),
+            midDbfs = features?.midDbfs?.toFloat(),
+            highDbfs = features?.highDbfs?.toFloat(),
+        )
         countActivity(at, relative)
         detector.onSample(at, relative)?.let { change ->
             val row = NoiseEvent(

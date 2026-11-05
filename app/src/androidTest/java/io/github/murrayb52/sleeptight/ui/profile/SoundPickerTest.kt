@@ -21,23 +21,22 @@ class SoundPickerTest {
     fun pickingASoundSavesItsKey() {
         var picked: String? = "unset"
         compose.setContent {
-            SleepTightTheme { SoundPickerDialog(AlarmSound.CHIME, onPick = { picked = it }, onDismiss = {}, preview = false) }
+            SleepTightTheme { SoundPickerDialog(AlarmSound.BIRDSONG, onPick = { picked = it }, onDismiss = {}, preview = false) }
         }
-        compose.onNodeWithText("Chime").assertIsSelected()
-        compose.onNodeWithText("Birdsong").performClick()
-        assertEquals("birdsong", picked)
         compose.onNodeWithText("Birdsong").assertIsSelected()
-        compose.onNodeWithText("Chime").performClick()
-        assertEquals(null, picked)
+        compose.onNodeWithText("Kalimba", substring = false).performClick()
+        assertEquals("kalimba", picked)
+        compose.onNodeWithText("Kalimba", substring = false).assertIsSelected()
+        compose.onNodeWithText("Chime").assertDoesNotExist()
+        compose.onNodeWithText("Music box").assertDoesNotExist()
     }
 
     @Test
     fun eachSoundShowsWhoMadeIt() {
         compose.setContent {
-            SleepTightTheme { SoundPickerDialog(AlarmSound.CHIME, onPick = {}, onDismiss = {}, preview = false) }
+            SleepTightTheme { SoundPickerDialog(AlarmSound.BIRDSONG, onPick = {}, onDismiss = {}, preview = false) }
         }
         compose.onNodeWithText("by F1tz · CC0 · Freesound", substring = true).assertExists()
-        compose.onNodeWithText("by thulitt · CC0 · Freesound", substring = true).assertExists()
-        compose.onNodeWithText("Made for SleepTight", substring = true).assertExists()
+        compose.onNodeWithText("by Tetoszka · CC0 · Freesound", substring = true).assertExists()
     }
 }

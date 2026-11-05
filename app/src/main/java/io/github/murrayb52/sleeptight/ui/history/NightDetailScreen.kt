@@ -217,7 +217,8 @@ fun NightDetailScreen(state: NightDetailUi, onBack: () -> Unit, onCheckGarmin: (
                     Text(
                         stringResource(
                             when (result) {
-                                GarminImporter.Result.IMPORTED -> R.string.garmin_check_imported
+                                GarminImporter.Result.IMPORTED, GarminImporter.Result.UPDATED -> R.string.garmin_check_imported
+                                GarminImporter.Result.UNCHANGED -> R.string.garmin_check_unchanged
                                 GarminImporter.Result.NO_DATA -> R.string.garmin_check_no_data
                                 GarminImporter.Result.NOT_CONNECTED -> R.string.garmin_check_not_connected
                                 GarminImporter.Result.FAILED -> R.string.garmin_check_failed

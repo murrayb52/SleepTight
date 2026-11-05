@@ -34,7 +34,7 @@ A reboot or a clock or time-zone change clears or shifts alarms. `AlarmReceiver`
 
 While the sound monitor is running, once a minute inside the window (except its last minute) the service asks `SmartTrigger.shouldWakeNow`:
 
-- Take the mean activity of the last **2 complete minutes**. Activity is seconds per minute more than 8 dB above baseline; see [sound-monitoring.md](sound-monitoring.md).
+- Take the mean activity of the last **2 complete minutes**. Activity is seconds per minute more than 12 dB above baseline; see [sound-monitoring.md](sound-monitoring.md).
 - Ring early if that mean is **above the night's 75th percentile** of per-minute activity (nearest-rank) **and** at least **3 active seconds** a minute.
 - Needs at least **30 minutes** of activity history and both recent minutes present. The minute in progress is never used.
 - At most one early ring per night, and none once the alarm has rung.
@@ -48,20 +48,20 @@ Activity per minute is kept in memory by the recorder and rebuilt from stored sa
 `AlarmRingService` (a foreground service of type `mediaPlayback`) is started by the ring alarm. It:
 
 - records `alarmFiredAt` on the night (first ring only, so snoozes don't overwrite it) and calls `AlarmEvents.onAlarmFired`
-- plays the **built-in chime** (`Chime`, a generated C–E–G bell repeating every 3 s, so no audio files are needed) on the **alarm stream**, with the volume ramping from **10 % to 100 % over 60 s**. There's **no vibration**: you asked for sound only (2026-11-04)
-- shows a full-screen alarm over the lock screen, with the time, **Dismiss** and, while snoozes are left, **Snooze N min**
+- plays the chosen sound (see [Sounds](#sounds)) on the **alarm stream**, with the volume ramping from **10 % to 100 % over 60 s**. There's **no vibration**: you asked for sound only (2026-11-04)
+- shows a full-screen alarm over the lock screen, with the time, a press-and-hold **I'm up** and, while snoozes are left, a swipe up to snooze
 
-If the phone is unlocked and in use, Android shows a heads-up notification with Snooze and Dismiss instead of taking over the screen. Home also shows a "Good morning" card with **Dismiss** and **Snooze** while the alarm is ringing or snoozed.
+If the phone is unlocked and in use, Android shows a heads-up notification with **Snooze** and **I'm up** instead of taking over the screen. Home also shows a "Good morning" card with **Snooze** while the alarm is ringing or snoozed; the press-and-hold I'm up below it ends the alarm and the night.
 
 An unanswered alarm stops after **10 minutes**.
 
-## Snooze and dismiss
+## Snooze and I'm up
 
-- **Snooze** adds one to the night's `snoozeCount`, reschedules the ring, shows "Alarm snoozed until 06:24" with a Dismiss action, and calls `AlarmEvents.onSnooze`. The count feeds the regularity snooze factor (goal: at most 1).
-- **Snoozes get shorter and run out** (`SnoozeLadder`). Each snooze is 2 minutes shorter than the last, never under 2: **9 → 7 → 5 → 3 → 2**. The ladder is baked in (`AlarmConfig.baseSnoozeMinutes`), isn't a setting, and the lengths are never shown in the app. `Settings.snoozeMinutes` is no longer used. After **5 snoozes** the alarm screen, the notification and Home offer only Stop, with "No snoozes left. Time to get up." The next snooze length is worked out from the night's count when the alarm starts ringing, so it's right after a restart too. Emulator-checked: snooze 5 is 2 minutes, and the re-ring offers only Stop.
-- **Stop** (the amber button, the notification's Stop action, or Stop on Tonight) stops the sound, cancels pending alarms and calls `AlarmEvents.onDismiss`. **It doesn't end the night**: I'm up is always its own tap, offered on the morning summary straight after Stop ([ui.md](ui.md#alarm-screen)).
+- **Snooze** adds one to the night's `snoozeCount`, reschedules the ring, shows "Alarm snoozed until 06:24" with an I'm up action, and calls `AlarmEvents.onSnooze`. The count feeds the regularity snooze factor (goal: at most 1).
+- **Snoozes get shorter and run out** (`SnoozeLadder`). Each snooze is 2 minutes shorter than the last, never under 2: **9 → 7 → 5 → 3 → 2**. The ladder is baked in (`AlarmConfig.baseSnoozeMinutes`), isn't a setting, and the lengths are never shown in the app. `Settings.snoozeMinutes` is no longer used. After **5 snoozes** the alarm screen, the notification and Home offer only I'm up, with "No snoozes left. Time to get up." The next snooze length is worked out from the night's count when the alarm starts ringing, so it's right after a restart too. Emulator-checked: snooze 5 is 2 minutes, and the re-ring offered only Stop (now I'm up).
+- **I'm up** (the press-and-hold button on the alarm screen, or the notification's I'm up action; `ACTION_IM_UP`) stops the sound, cancels pending alarms, calls `AlarmEvents.onDismiss` **and ends the night** (`AppContainer.endNightFromAlarm`: wake tap now, tracking stopped, Garmin import or scoring). Until 2026-11-05 these were two taps, Stop and then I'm up, which was confusing in practice. Emulator-checked end to end (`AlarmImUpTest`).
 - **Snooze** on the alarm screen is a **swipe up** anywhere.
-- I'm up and an unanswered alarm (after 10 minutes) use the same dismiss.
+- **An unanswered alarm** (after 10 minutes) only stops ringing. It doesn't end the night: you may not be there.
 
 ## Bedtime reminder
 
@@ -88,14 +88,10 @@ Shown in the alarm card when the alarm is on:
 
 ## Sounds
 
-Six sounds (`AlarmSound`), chosen in **Profile → Alarm → Sound**:
+Four sounds (`AlarmSound`), chosen in **Profile → Alarm → Sound**: **Birdsong** (the default), Morning piano, Kalimba drops and Kalimba. All are CC0 recordings from Freesound in `res/raw`; sources and preparation in [`ASSETS.md`](../ASSETS.md).
 
-| Sound | Source |
-|---|---|
-| Chime (default) | generated in code (`Chime`), so the app works with no audio files |
-| Birdsong, Morning piano, Kalimba drops, Kalimba, Music box | CC0 recordings from Freesound in `res/raw`; sources and preparation in [`ASSETS.md`](../ASSETS.md) |
-
-- The choice is stored as a key in `Settings.alarmSound` (null = chime). An unknown key, or a file that won't play, falls back to the chime.
-- Bundled sounds loop with `MediaPlayer` on the alarm stream; the chime loops with a static `AudioTrack`. Both get the same 10 → 100 % ramp (`AlarmPlayer`).
-- In the picker, each sound shows who made it ("by F1tz · CC0 · Freesound", or "Made for SleepTight" for the chime), from the same `SoundCredit` as the credits page. Tapping a sound selects it and plays a preview at half volume on the alarm stream, so it follows the alarm volume. The preview stops on the next tap or when the picker closes.
+- **Chime and Music box were removed on 2026-11-05.** Their bright, ringing pitch startled the user awake.
+- The choice is stored as a key in `Settings.alarmSound`. No key, or the key of a removed sound (`music_box`), means Birdsong.
+- Sounds loop with `MediaPlayer` on the alarm stream, with the 10 → 100 % ramp (`AlarmPlayer`). If a file can't be played, the generated chime (`Chime`, a C–E–G bell, looped with a static `AudioTrack`) rings instead: it's no longer a choice, but an alarm that rings beats one that doesn't.
+- In the picker, each sound shows who made it ("by F1tz · CC0 · Freesound"), from the same `SoundCredit` as the credits page. Tapping a sound selects it and plays a preview at half volume on the alarm stream, so it follows the alarm volume. The preview stops on the next tap or when the picker closes.
 - Emulator-checked: with Birdsong selected, the ring plays a looping `MediaPlayer` with `USAGE_ALARM`.

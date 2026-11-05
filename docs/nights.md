@@ -58,7 +58,7 @@ Enums are stored by name.
 | Max snoozes | 1 |
 | Alarm window | 05:45–06:15 |
 | Snooze length | 9 min |
-| Alarm sound | generated chime |
+| Alarm sound | Birdsong |
 | Espresso shot, home / restaurant | 63 / 75 mg |
 | Decaf shot | 3 mg |
 | Cola | 10 mg per 100 ml |

@@ -72,8 +72,7 @@ fun SoundPickerDialog(current: AlarmSound, onPick: (String?) -> Unit, onDismiss:
                             Text(stringResource(sound.label), style = MaterialTheme.typography.bodyLarge, color = Palette.Text)
                             // Who made it, from the same credit the credits page uses.
                             Text(
-                                sound.credit?.let { stringResource(R.string.sound_credit_short, it.author) }
-                                    ?: stringResource(R.string.credits_made_here),
+                                stringResource(R.string.sound_credit_short, sound.credit.author),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Palette.Muted,
                             )

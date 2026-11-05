@@ -37,8 +37,6 @@ class HomeScreenTest {
     private var micRequests = 0
     private var restarts = 0
     private val alarmToggles = mutableListOf<Boolean>()
-    private var stops = 0
-    private var openedNight: Long? = null
 
     private fun show(state: HomeUiState, device: DeviceState = DeviceState()) = compose.setContent {
         SleepTightTheme {
@@ -55,8 +53,6 @@ class HomeScreenTest {
                     onAllowMicrophone = { micRequests++ },
                     onRestartTracking = { restarts++ },
                     onAlarmToggled = { alarmToggles += it },
-                    onStopAlarm = { stops++ },
-                    onOpenNight = { openedNight = it },
                 ),
             )
         }
@@ -75,7 +71,9 @@ class HomeScreenTest {
     fun beforeBedShowsGoingToBedAndTheWakeByWheel() {
         show(HomeUiState(loading = false, zone = zone))
         compose.onNodeWithTag("wakeByWheel").assertExists()
-        compose.onNodeWithText("to wake you gently between", substring = true).assertExists()
+        compose.onNodeWithText("Gently wakes you between", substring = true).assertExists()
+        compose.onNodeWithText("window", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Bedtime goal", substring = true).assertExists()
         compose.onNodeWithText("Going to bed").performScrollTo().performClick()
         assertEquals(1, bedTaps)
     }
@@ -83,16 +81,8 @@ class HomeScreenTest {
     @Test
     fun beforeBedExplainsTheAlarmIsSetAtTheBedTap() {
         show(HomeUiState(loading = false, zone = zone))
-        compose.onNodeWithText("When you tap Going to bed, the alarm is set", substring = true).assertExists()
+        compose.onNodeWithText("Set when you tap Going to bed", substring = true).assertExists()
         compose.onNodeWithText("Alarm on").assertDoesNotExist()
-    }
-
-    @Test
-    fun lastNightOpensItsPage() {
-        val last = LastNightUi(bed, bed.plus(Duration.ofMinutes(475)), Duration.ofMinutes(475), nightId = 9)
-        show(HomeUiState(loading = false, zone = zone, lastNight = last))
-        compose.onNodeWithText("Last night").performScrollTo().performClick()
-        assertEquals(9L, openedNight)
     }
 
     @Test
@@ -146,10 +136,11 @@ class HomeScreenTest {
     }
 
     @Test
-    fun ringingAlarmCanBeStoppedFromTonight() {
+    fun ringingAlarmIsEndedByImUpOnTonight() {
         show(inBed(recording(0.0), AlarmUi(state = AlarmState.Ringing(1, bed, nextSnoozeMinutes = 9))))
-        compose.onNodeWithText("Stop alarm").performScrollTo().performClick()
-        assertEquals(1, stops)
+        compose.onNodeWithText("Stop alarm").assertDoesNotExist()
+        compose.onNodeWithText("Snooze", substring = true).assertExists()
+        compose.onNodeWithTag("imUp").assertExists()
     }
 
     @Test

@@ -44,7 +44,7 @@ data class ScoreCache(
 
     companion object {
         /** Bump when the scoring changes, so every cached score is rebuilt on the next app start. */
-        const val VERSION = 1
+        const val VERSION = 2
 
         /** Every cache JSON starts with this, which lets the database find out-of-date ones. */
         const val PREFIX = "{\"version\":$VERSION,"

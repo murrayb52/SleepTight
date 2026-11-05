@@ -6,6 +6,7 @@ import io.github.murrayb52.sleeptight.alarm.AlarmEvents
 import io.github.murrayb52.sleeptight.alarm.AlarmScheduler
 import io.github.murrayb52.sleeptight.alarm.AlarmState
 import io.github.murrayb52.sleeptight.alarm.BedtimeReminderScheduler
+import io.github.murrayb52.sleeptight.data.Night
 import io.github.murrayb52.sleeptight.data.NightRepository
 import io.github.murrayb52.sleeptight.health.GarminImporter
 import io.github.murrayb52.sleeptight.health.GarminSource
@@ -56,6 +57,9 @@ class AppContainer(context: Context) {
     val garminSource: GarminSource = HealthConnectGarminSource(context.applicationContext)
     val garminImporter = GarminImporter(database, garminSource, nightScorer, clock)
 
+    /** Nights Garmin rewrote since they were imported, shown as a swipe-away note until dismissed. */
+    val garminUpdates = MutableStateFlow<List<GarminImporter.Update>>(emptyList())
+
     /**
      * Call when a night has just been closed (I'm up): tries Garmin first (it rescores on success),
      * otherwise scores from the sound estimate straight away. Garmin data that arrives later is
@@ -63,8 +67,26 @@ class AppContainer(context: Context) {
      */
     fun onNightClosed(nightId: Long) {
         appScope.launch {
-            if (garminImporter.import(nightId) != GarminImporter.Result.IMPORTED) nightScorer.rescore(nightId)
+            val result = garminImporter.import(nightId)
+            if (result != GarminImporter.Result.IMPORTED && result != GarminImporter.Result.UPDATED) nightScorer.rescore(nightId)
         }
+    }
+
+    /**
+     * I'm up from the alarm (its screen or notification): ends the open night now, stops tracking
+     * and the alarm, then imports or scores the night. Returns the closed night, or null if none
+     * was open.
+     */
+    suspend fun endNightFromAlarm(): Night? {
+        val closed = try {
+            nightRepository.wakeUp()
+        } catch (e: IllegalArgumentException) {
+            null // Only if the clock moved back past the bed tap; I'm up on Tonight explains it.
+        } ?: return null
+        nightTracker.stop()
+        alarmController.disarm(closed.id)
+        onNightClosed(closed.id)
+        return closed
     }
 }
 

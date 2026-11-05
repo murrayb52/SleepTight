@@ -54,7 +54,7 @@ class HomeViewModel(
     /** A one-off message (string resource) for the snackbar, or null. */
     val message: StateFlow<Int?> = _message.asStateFlow()
 
-    private val nights = combine(repository.openNight, repository.latestClosedNight, repository.settings, ::Triple)
+    private val nights = combine(repository.openNight, repository.settings, ::Pair)
 
     private val openNightNoise = repository.openNight
         .map { it?.id }
@@ -67,10 +67,9 @@ class HomeViewModel(
         promptDismissedFor,
         combine(tracker.status, alarm.state, ::Pair),
         openNightNoise,
-    ) { (open, last, settings), now, dismissed, (tracking, alarmState), noise ->
+    ) { (open, settings), now, dismissed, (tracking, alarmState), noise ->
         buildHomeUiState(
             openNight = open,
-            lastNight = last,
             now = now,
             zone = clock.zone,
             targetSleep = Duration.ofMinutes(settings.targetSleepMinutes.toLong()),
@@ -105,10 +104,6 @@ class HomeViewModel(
         alarm.snooze()
     }
 
-    fun onStopAlarm() {
-        alarm.stop()
-    }
-
     /** The wake-by wheel settled on a new time: the window keeps its length and ends there. */
     fun onWakeByChanged(time: LocalTime) {
         viewModelScope.launch {
@@ -117,13 +112,6 @@ class HomeViewModel(
             if (end == s.alarmWindowEndMinutes) return@launch
             val length = Math.floorMod(s.alarmWindowEndMinutes - s.alarmWindowStartMinutes, 24 * 60)
             repository.updateSettings(s.copy(alarmWindowEndMinutes = end, alarmWindowStartMinutes = Math.floorMod(end - length, 24 * 60)))
-        }
-    }
-
-    fun onWindowLengthChanged(minutes: Int) {
-        viewModelScope.launch {
-            val s = repository.getSettings()
-            repository.updateSettings(s.copy(alarmWindowStartMinutes = Math.floorMod(s.alarmWindowEndMinutes - minutes, 24 * 60)))
         }
     }
 

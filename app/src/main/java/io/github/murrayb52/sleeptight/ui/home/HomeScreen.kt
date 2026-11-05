@@ -105,16 +105,13 @@ data class HomeActions(
     val onOpenAppSettings: () -> Unit = {},
     val onAlarmToggled: (Boolean) -> Unit = {},
     val onSnoozeAlarm: () -> Unit = {},
-    val onStopAlarm: () -> Unit = {},
     val onAllowExactAlarms: () -> Unit = {},
     val onAllowFullScreen: () -> Unit = {},
     val onWakeByChanged: (LocalTime) -> Unit = {},
-    val onWindowLengthChanged: (Int) -> Unit = {},
-    val onOpenNight: (nightId: Long) -> Unit = {},
 )
 
 @Composable
-fun HomeRoute(onOpenNight: (Long) -> Unit, viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)) {
+fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -173,12 +170,9 @@ fun HomeRoute(onOpenNight: (Long) -> Unit, viewModel: HomeViewModel = viewModel(
             onOpenAppSettings = { context.startActivity(appSettingsIntent(context)) },
             onAlarmToggled = viewModel::onAlarmToggled,
             onSnoozeAlarm = viewModel::onSnoozeAlarm,
-            onStopAlarm = viewModel::onStopAlarm,
             onAllowExactAlarms = { context.startActivity(exactAlarmSettingsIntent(context)) },
             onAllowFullScreen = { context.startActivity(fullScreenSettingsIntent(context)) },
             onWakeByChanged = viewModel::onWakeByChanged,
-            onWindowLengthChanged = viewModel::onWindowLengthChanged,
-            onOpenNight = onOpenNight,
         ),
     )
 
@@ -289,6 +283,8 @@ private fun SleepContent(state: HomeUiState, device: DeviceState, actions: HomeA
 
     Spacer(Modifier.height(28.dp))
     val alarm = state.alarm
+    // Follows the wheel as it turns, so the sentence below updates at once rather than after the save.
+    var shownEnd by remember(alarm.windowEnd) { mutableStateOf(alarm.windowEnd) }
     Text(stringResource(R.string.wake_me_by).uppercase(), style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
     Spacer(Modifier.height(4.dp))
     WheelPicker(
@@ -307,22 +303,17 @@ private fun SleepContent(state: HomeUiState, device: DeviceState, actions: HomeA
         modifier = contentWidth.testTag("wakeByWheel"),
         // Round to the nearest 5 minutes if the stored time is off the grid.
         nearest = { _, t -> Math.floorMod(Math.round((t.hour * 60 + t.minute) / 5.0).toInt(), 24 * 12) },
+        onCentred = { shownEnd = it },
     )
 
     Spacer(Modifier.height(12.dp))
-    var choosingWindow by rememberSaveable { mutableStateOf(false) }
-    Chip(stringResource(R.string.window_chip, alarm.windowMinutes)) { choosingWindow = true }
-    Spacer(Modifier.height(10.dp))
-    // Nothing is set yet: the alarm is armed by the bed tap, for this window.
+    // Nothing is set yet: the alarm is armed by the bed tap, for this window (its length is in Profile).
     CentredText(
-        stringResource(R.string.alarm_explainer, time.format(alarm.windowStart), time.format(alarm.windowEnd)),
+        stringResource(R.string.alarm_explainer, time.format(shownEnd.minusMinutes(alarm.windowMinutes.toLong())), time.format(shownEnd)),
         MaterialTheme.typography.bodyMedium,
         contentWidth,
         colour = Palette.TextSoft,
     )
-    if (choosingWindow) {
-        WindowLengthDialog(alarm.windowMinutes, onPick = { actions.onWindowLengthChanged(it); choosingWindow = false }, onDismiss = { choosingWindow = false })
-    }
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -336,13 +327,6 @@ private fun SleepContent(state: HomeUiState, device: DeviceState, actions: HomeA
             Text(stringResource(R.string.going_to_bed), style = MaterialTheme.typography.headlineSmall)
     }
 
-    Spacer(Modifier.height(14.dp))
-    val last = state.lastNight
-    if (last != null) {
-        LastNightRow(last, state.zone, time) { actions.onOpenNight(last.nightId) }
-    } else {
-        CentredText(stringResource(R.string.first_night_hint), MaterialTheme.typography.bodyMedium, contentWidth, Palette.Muted)
-    }
     }
 }
 
@@ -354,68 +338,6 @@ private fun greetingFor(t: LocalTime) = when (t.hour) {
     in 12..17 -> R.string.greeting_afternoon
     in 18..21 -> R.string.greeting_evening
     else -> R.string.greeting_night
-}
-
-@Composable
-private fun Chip(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 44.dp),
-        shape = RoundedCornerShape(50),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = Palette.Raised, contentColor = Palette.Text),
-    ) { Text(text, style = MaterialTheme.typography.bodyMedium) }
-}
-
-@Composable
-private fun WindowLengthDialog(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.window_title)) },
-        text = {
-            Column {
-                listOf(15, 20, 30, 45, 60).forEach { m ->
-                    TextButton(onClick = { onPick(m) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            stringResource(R.string.window_option, m) + if (m == current) " ✓" else "",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-        containerColor = Palette.Card,
-    )
-}
-
-@Composable
-private fun LastNightRow(last: LastNightUi, zone: ZoneId, time: DateTimeFormatter, onClick: () -> Unit) {
-    Row(
-        contentWidth
-            .clip(RoundedCornerShape(16.dp))
-            .background(Palette.Card)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        ScoreDial(last.score, size = 44.dp, textStyle = MaterialTheme.typography.labelLarge)
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.last_night), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(
-                    R.string.last_night_summary,
-                    time.format(last.bedTapAt.atZone(zone)),
-                    time.format(last.wakeTapAt.atZone(zone)),
-                    formatDuration(last.timeInBed),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = Palette.Muted,
-            )
-        }
-        Text("›", style = MaterialTheme.typography.headlineSmall, color = Palette.Muted)
-    }
 }
 
 /** A crescent moon. */
@@ -550,10 +472,7 @@ private fun TonightAlarm(alarm: AlarmUi, zone: ZoneId, time: DateTimeFormatter, 
                 stringResource(R.string.alarm_good_morning)
             }
             CentredText(title, MaterialTheme.typography.titleMedium)
-            Button(
-                onClick = actions.onStopAlarm,
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.Ember, contentColor = Palette.OnEmber),
-            ) { Text(stringResource(R.string.alarm_stop)) }
+            // No Stop here: I'm up below silences the alarm and ends the night (2026-11-05).
             if (s is AlarmState.Ringing && s.nextSnoozeMinutes != null) {
                 OutlinedButton(onClick = actions.onSnoozeAlarm) { Text(stringResource(R.string.alarm_snooze_action)) }
             }
