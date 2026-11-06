@@ -84,7 +84,7 @@ Shown in the alarm card when the alarm is on:
 | Alarm volume at 0 | "Your alarm volume is off, so the alarm will only vibrate…" |
 | Exact alarms not allowed (Android 12 only; 13+ grants `USE_EXACT_ALARM` to alarm apps) | Explanation and **Allow**, which opens "Alarms & reminders" |
 | Full-screen notifications not allowed (Android 14+) | It still rings, but you must unlock to stop it. **Allow** opens the setting |
-| Notifications off | No alarm screen or buttons. It rings for up to 10 minutes; open SleepTight to stop it |
+| Notifications off | No alarm screen or buttons. It rings for up to 10 minutes; open SleepTight to stop it. The warning's Allow opens the app's notification settings |
 
 ## Sounds
 

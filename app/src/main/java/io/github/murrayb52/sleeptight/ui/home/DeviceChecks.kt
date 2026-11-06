@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 fun readDeviceState(context: Context): DeviceState {
@@ -20,8 +21,8 @@ fun readDeviceState(context: Context): DeviceState {
     val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     return DeviceState(
         micGranted = granted(Manifest.permission.RECORD_AUDIO),
-        notificationsGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            granted(Manifest.permission.POST_NOTIFICATIONS),
+        // Covers both the Android 13+ permission and the app's switch in Settings.
+        notificationsGranted = NotificationManagerCompat.from(context).areNotificationsEnabled(),
         batteryUnrestricted = power.isIgnoringBatteryOptimizations(context.packageName),
         isSamsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true),
         alarmVolumeOff = context.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_ALARM) == 0,
@@ -47,6 +48,10 @@ fun fullScreenSettingsIntent(context: Context) =
     } else {
         appSettingsIntent(context)
     }
+
+/** This app's notification settings, where notifications can be switched back on. */
+fun notificationSettingsIntent(context: Context) =
+    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
 
 /** Permissions asked for at the first bed tap. */
 val bedTimePermissions: Array<String> =

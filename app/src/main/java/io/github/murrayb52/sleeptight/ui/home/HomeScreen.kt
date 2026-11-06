@@ -111,6 +111,7 @@ data class HomeActions(
     val onSnoozeAlarm: () -> Unit = {},
     val onAllowExactAlarms: () -> Unit = {},
     val onAllowFullScreen: () -> Unit = {},
+    val onAllowNotifications: () -> Unit = {},
     val onWakeByChanged: (LocalTime) -> Unit = {},
     val onOpenCaffeine: () -> Unit = {},
     val onNoteWaking: () -> Unit = {},
@@ -182,6 +183,7 @@ fun HomeRoute(viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Facto
             onSnoozeAlarm = viewModel::onSnoozeAlarm,
             onAllowExactAlarms = { context.startActivity(exactAlarmSettingsIntent(context)) },
             onAllowFullScreen = { context.startActivity(fullScreenSettingsIntent(context)) },
+            onAllowNotifications = { context.startActivity(notificationSettingsIntent(context)) },
             onWakeByChanged = viewModel::onWakeByChanged,
             onOpenCaffeine = { showCaffeine = true },
             onNoteWaking = { container.wakePromptAt.value = container.clock.millis() },
@@ -406,7 +408,7 @@ private fun SetupWarnings(alarmOn: Boolean, device: DeviceState, actions: HomeAc
             if (!device.exactAlarmsAllowed) add { WarningPanel(stringResource(R.string.alarm_exact_denied), stringResource(R.string.allow), actions.onAllowExactAlarms) }
             if (device.alarmVolumeOff) add { WarningPanel(stringResource(R.string.alarm_volume_off)) }
             if (!device.notificationsGranted) {
-                add { WarningPanel(stringResource(R.string.alarm_notifications_off)) }
+                add { WarningPanel(stringResource(R.string.alarm_notifications_off), stringResource(R.string.allow), actions.onAllowNotifications) }
             } else if (!device.fullScreenAllowed) {
                 add { WarningPanel(stringResource(R.string.alarm_full_screen_denied), stringResource(R.string.allow), actions.onAllowFullScreen) }
             }
