@@ -57,6 +57,13 @@ class NightRepositoryTest {
     }
 
     @Test
+    fun goToBedStampsTheAppVersion() = runTest {
+        val versioned = NightRepository(db, clock, appVersion = "0.7.0-1-gabc1234")
+        assertEquals("0.7.0-1-gabc1234", versioned.goToBed().appVersion)
+        assertEquals("0.7.0-1-gabc1234", db.nightDao().getOpenNight()?.appVersion)
+    }
+
+    @Test
     fun doubleBedTapReturnsTheSameNight() = runTest {
         val first = repo.goToBed()
         clock.advance(Duration.ofSeconds(2))

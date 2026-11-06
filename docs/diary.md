@@ -2,7 +2,7 @@
 
 The diary records the context that sound and Garmin can't: earplugs, sleep-hygiene habits, why you woke, how rested you feel, and caffeine. It exists to give labels and inputs to the sound-model investigation (see the [Roadmap](Roadmap.md)) and to compare habits against the score later. Design: [`superpowers/specs/2026-11-05-sleep-diary-design.md`](superpowers/specs/2026-11-05-sleep-diary-design.md).
 
-Everything is stored in Room (database version 6) and is deleted with its night. Until JSON export exists, it's read off the phone with `adb` (`run-as … sqlite3` or by pulling the database).
+Everything is stored in Room (database version 6 and later) and is deleted with its night. Until JSON export exists, it's read off the phone with `adb` (`run-as … sqlite3` or by pulling the database).
 
 ## At the bed tap: "Tonight"
 

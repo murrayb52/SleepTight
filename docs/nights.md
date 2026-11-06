@@ -39,7 +39,7 @@ All instants are epoch milliseconds (UTC). Every per-night table cascades on del
 
 | Table | Columns | Notes |
 |---|---|---|
-| `nights` | id, bedTapAt, wakeTapAt?, zoneId, alarmWindowStart?, alarmWindowEnd?, alarmFiredAt?, snoozeCount, garminImported, scoreJson? | `scoreJson` is a cache, always recomputable |
+| `nights` | id, bedTapAt, wakeTapAt?, zoneId, alarmWindowStart?, alarmWindowEnd?, alarmFiredAt?, snoozeCount, garminImported, scoreJson?, appVersion? | `scoreJson` is a cache, always recomputable. `appVersion` is the versionName at the bed tap (from `git describe`, such as `0.7.0-2-gabc1234`, with `-dirty` for uncommitted builds), so data can be grouped by the code that recorded it. It's null for nights before database version 7 |
 | `sound_samples` | nightId, timestamp, dbRelative | Key (nightId, timestamp). Levels only, never audio |
 | `noise_events` | id, nightId, start, end, peakDbRelative | |
 | `sleep_stage_segments` | id, nightId, start, end, stage, source | stage: AWAKE / LIGHT / DEEP / REM / UNKNOWN; source: GARMIN / ESTIMATED |

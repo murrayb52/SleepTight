@@ -20,7 +20,7 @@ import androidx.room.RoomDatabase
         WakeNote::class,
         MorningSurvey::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         // 1 → 2: Settings.alarmEnabled (defaults to on).
@@ -35,6 +35,8 @@ import androidx.room.RoomDatabase
         // 5 → 6: the sleep diary (night_context, wake_notes, morning_surveys) and
         // Settings.earplugsDefault (defaults to on). 2026-11-05.
         AutoMigration(from = 5, to = 6),
+        // 6 → 7: Night.appVersion, the build that recorded the night (null for older nights). 2026-11-06.
+        AutoMigration(from = 6, to = 7),
     ],
 )
 abstract class SleepTightDatabase : RoomDatabase() {

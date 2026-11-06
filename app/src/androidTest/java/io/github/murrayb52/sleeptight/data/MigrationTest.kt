@@ -137,4 +137,19 @@ class MigrationTest {
             )
         }
     }
+
+    @Test
+    fun version6To7KeepsNightsWithNoAppVersion() {
+        helper.createDatabase(dbName, 6).use { db ->
+            db.execSQL("INSERT INTO nights (id, bedTapAt, wakeTapAt, zoneId, snoozeCount, garminImported) VALUES (7, 1000, 2000, 'Africa/Johannesburg', 5, 1)")
+        }
+        helper.runMigrationsAndValidate(dbName, 7, true).use { db ->
+            db.query("SELECT snoozeCount, appVersion FROM nights WHERE id = 7").use { c ->
+                c.moveToFirst()
+                assertEquals(5, c.getInt(0))
+                assertTrue(c.isNull(1)) // older nights don't know their version
+            }
+            db.execSQL("INSERT INTO nights (id, bedTapAt, zoneId, snoozeCount, garminImported, appVersion) VALUES (8, 3000, 'Africa/Johannesburg', 0, 0, '0.7.0')")
+        }
+    }
 }

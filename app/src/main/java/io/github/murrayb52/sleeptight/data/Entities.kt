@@ -27,6 +27,12 @@ data class Night(
     val garminImported: Boolean = false,
     /** Cached score breakdown. Derived data: it can always be recomputed from the rest. */
     val scoreJson: String? = null,
+    /**
+     * The app version that recorded the night (the git-derived versionName at the bed tap, such as
+     * "0.7.0-2-gabc1234"), so data can be grouped by the code that produced it. Null for nights
+     * before database version 7.
+     */
+    val appVersion: String? = null,
 )
 
 val Night.isOpen: Boolean get() = wakeTapAt == null

@@ -1,6 +1,7 @@
 package io.github.murrayb52.sleeptight
 
 import android.content.Context
+import android.content.pm.PackageManager
 import io.github.murrayb52.sleeptight.alarm.AlarmController
 import io.github.murrayb52.sleeptight.alarm.AlarmEvents
 import io.github.murrayb52.sleeptight.alarm.AlarmScheduler
@@ -36,7 +37,7 @@ class AppContainer(context: Context) {
     private val appContext: Context = context.applicationContext
     val clock: Clock = DeviceClock
     val database: SleepTightDatabase = SleepTightDatabase.create(context)
-    val nightRepository = NightRepository(database, clock)
+    val nightRepository = NightRepository(database, clock, appVersion(appContext))
 
     /** Outlives screens and the service, for work that must finish (such as the last sample flush). */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -126,4 +127,11 @@ object DeviceClock : Clock() {
     override fun getZone(): ZoneId = ZoneId.systemDefault()
     override fun withZone(zone: ZoneId): Clock = system(zone)
     override fun instant(): Instant = Instant.now()
+}
+
+/** This build's versionName (from git; see app/build.gradle.kts), or null if it can't be read. */
+private fun appVersion(context: Context): String? = try {
+    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+} catch (e: PackageManager.NameNotFoundException) {
+    null
 }

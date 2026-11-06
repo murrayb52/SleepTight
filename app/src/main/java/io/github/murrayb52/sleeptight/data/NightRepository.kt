@@ -15,6 +15,8 @@ import java.time.Instant
 class NightRepository(
     private val db: SleepTightDatabase,
     private val clock: Clock,
+    /** Stamped on each new night; see [Night.appVersion]. */
+    private val appVersion: String? = null,
 ) {
     private val nights = db.nightDao()
     private val settingsDao = db.settingsDao()
@@ -55,7 +57,7 @@ class NightRepository(
      */
     suspend fun goToBed(): Night = db.withTransaction {
         nights.getOpenNight() ?: run {
-            val night = Night(bedTapAt = clock.millis(), zoneId = clock.zone.id)
+            val night = Night(bedTapAt = clock.millis(), zoneId = clock.zone.id, appVersion = appVersion)
             night.copy(id = nights.insert(night))
         }
     }
