@@ -19,6 +19,11 @@ data class ScoreCache(
     val parts: List<Part>,
     val metrics: Metrics,
     val regularity: Factors,
+    /**
+     * The phone's own measurements from overnight sound, when the score used Garmin's stages
+     * instead; null otherwise (without Garmin, [metrics] already are the phone's). Since version 3.
+     */
+    val phone: Metrics? = null,
 ) {
     @Serializable
     data class Part(val component: String, val points: Double, val maxPoints: Double)
@@ -44,7 +49,7 @@ data class ScoreCache(
 
     companion object {
         /** Bump when the scoring changes, so every cached score is rebuilt on the next app start. */
-        const val VERSION = 2
+        const val VERSION = 3
 
         /** Every cache JSON starts with this, which lets the database find out-of-date ones. */
         const val PREFIX = "{\"version\":$VERSION,"

@@ -45,13 +45,35 @@ class ScoreNightTest {
         assertTrue(cache.deepRemRedistributed)
         assertEquals(450L, cache.metrics.totalSleepMinutes)
         assertNotNull(cache.total)
-        val segs = requireNotNull(scored.estimatedSegments)
+        val segs = scored.estimatedSegments
         assertTrue(segs.all { it.source == StageSource.ESTIMATED && it.nightId == 5L })
         assertEquals(listOf(SleepStage.AWAKE, SleepStage.UNKNOWN, SleepStage.AWAKE), segs.map { it.stage })
     }
 
     @Test
-    fun `Garmin segments win and nothing is estimated`() {
+    fun `with Garmin the score uses Garmin, and the phone's estimate is kept beside it`() {
+        val segments = listOf(
+            garmin(SleepStage.LIGHT, "2026-11-03T22:10", "2026-11-04T01:00"),
+            garmin(SleepStage.DEEP, "2026-11-04T01:00", "2026-11-04T03:00"),
+            garmin(SleepStage.REM, "2026-11-04T03:00", "2026-11-04T05:50"),
+        )
+        val scored = scoreNight(night, segments, emptyList(), emptyList(), Goals(), sound())
+        assertEquals("GARMIN", scored.cache.source)
+        assertEquals(460L, scored.cache.metrics.totalSleepMinutes)
+        // The same estimate as a night without Garmin: 15 restless minutes at each end.
+        val phone = requireNotNull(scored.cache.phone)
+        assertEquals(450L, phone.totalSleepMinutes)
+        assertNull(phone.deepShare)
+        assertEquals(listOf(SleepStage.AWAKE, SleepStage.UNKNOWN, SleepStage.AWAKE), scored.estimatedSegments.map { it.stage })
+    }
+
+    @Test
+    fun `without Garmin there's no separate phone record, since the main one is the phone's`() {
+        assertNull(scoreNight(night, emptyList(), emptyList(), emptyList(), Goals(), sound()).cache.phone)
+    }
+
+    @Test
+    fun `Garmin segments without any sound means nothing is estimated`() {
         val segments = listOf(
             garmin(SleepStage.LIGHT, "2026-11-03T22:10", "2026-11-04T01:00"),
             garmin(SleepStage.DEEP, "2026-11-04T01:00", "2026-11-04T03:00"),
@@ -59,7 +81,8 @@ class ScoreNightTest {
         )
         val scored = scoreNight(night, segments, emptyList(), emptyList(), Goals(), sound = emptyList())
         assertEquals("GARMIN", scored.cache.source)
-        assertNull(scored.estimatedSegments)
+        assertTrue(scored.estimatedSegments.isEmpty())
+        assertNull(scored.cache.phone)
         assertEquals(460L, scored.cache.metrics.totalSleepMinutes)
         assertEquals(5, scored.cache.parts.size)
     }
@@ -70,7 +93,7 @@ class ScoreNightTest {
         assertNull(scored.cache.total)
         assertNull(scored.cache.source)
         assertEquals(480L, scored.cache.metrics.timeInBedMinutes)
-        assertTrue(scored.estimatedSegments!!.isEmpty())
+        assertTrue(scored.estimatedSegments.isEmpty())
     }
 
     @Test

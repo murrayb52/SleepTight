@@ -8,6 +8,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.murrayb52.sleeptight.data.SleepStage
+import io.github.murrayb52.sleeptight.data.SleepStageSegment
+import io.github.murrayb52.sleeptight.data.StageSource
 import io.github.murrayb52.sleeptight.metrics.Goals
 import io.github.murrayb52.sleeptight.ui.theme.SleepTightTheme
 import org.junit.Assert.assertEquals
@@ -114,5 +117,44 @@ class NightDetailScreenTest {
         compose.onNodeWithTag("deleteNight").performScrollTo().performClick()
         compose.onNodeWithText("Delete").performClick()
         assertEquals(1, deleted)
+    }
+
+    /** A Garmin-scored night like 8–9 Nov: Garmin saw no wake-ups, the phone's sound estimate saw 5. */
+    private fun garminNight(phone: io.github.murrayb52.sleeptight.scoring.ScoreCache.Metrics?): NightDetailUi {
+        val start = bed.toEpochMilli()
+        fun seg(from: Long, to: Long, stage: SleepStage, source: StageSource) =
+            SleepStageSegment(nightId = 1, start = start + from * 60_000, end = start + to * 60_000, stage = stage, source = source)
+        val score = io.github.murrayb52.sleeptight.scoring.ScoreCache(
+            total = 69,
+            source = "GARMIN",
+            deepRemRedistributed = false,
+            parts = emptyList(),
+            metrics = io.github.murrayb52.sleeptight.scoring.ScoreCache.Metrics(486, 470, 8, 0, 0.98, 0.19, 0.18, 0.37, 30, 24),
+            regularity = io.github.murrayb52.sleeptight.scoring.ScoreCache.Factors(1.0, 1.0, 1.0, null),
+            phone = phone,
+        )
+        return NightDetailUi(
+            loading = false,
+            night = night.copy(score = 69),
+            score = score,
+            stages = listOf(seg(8, 486, SleepStage.LIGHT, StageSource.GARMIN)),
+            phoneStages = listOf(seg(0, 3, SleepStage.AWAKE, StageSource.ESTIMATED), seg(3, 200, SleepStage.UNKNOWN, StageSource.ESTIMATED), seg(200, 210, SleepStage.AWAKE, StageSource.ESTIMATED), seg(210, 486, SleepStage.UNKNOWN, StageSource.ESTIMATED)),
+        )
+    }
+
+    @Test
+    fun aGarminNightStillShowsWhatThePhoneRecorded() {
+        val phone = io.github.murrayb52.sleeptight.scoring.ScoreCache.Metrics(486, 334, 3, 5, 0.90, null, null, null, 30, 24)
+        compose.setContent { SleepTightTheme { NightDetailScreen(garminNight(phone), onBack = {}) } }
+        compose.onNodeWithTag("phoneRecord").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Recorded by this phone").assertIsDisplayed()
+        compose.onNodeWithText("5 h 34 min").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("5").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun withoutAPhoneRecordThereIsNoPhonePanel() {
+        compose.setContent { SleepTightTheme { NightDetailScreen(garminNight(null), onBack = {}) } }
+        compose.onNodeWithTag("phoneRecord").assertDoesNotExist()
     }
 }

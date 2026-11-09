@@ -289,6 +289,9 @@
 
     <!-- Morning report -->
     <string name="how_you_slept">How you slept</string>
+    <string name="phone_record_title">Recorded by this phone</string>
+    <string name="phone_record_note">Estimated from overnight sound. Garmin\'s stages are used for the score; this is the phone\'s own view of the night.</string>
+    <string name="metric_wake_ups">Wake-ups</string>
     <string name="metric_total_sleep">Total sleep</string>
     <string name="metric_efficiency">Efficiency</string>
     <string name="metric_fall_asleep">Time to fall asleep</string>
