@@ -120,7 +120,11 @@ fun ProfileScreen(
                     R.string.settings_alarm_summary,
                     stringResource(R.string.window_option, window),
                     stringResource(AlarmSound.of(s.alarmSound).label),
-                    if (s.snoozesAllowed == 0) stringResource(R.string.snoozes_none_summary) else pluralStringResource(R.plurals.snooze_count, s.snoozesAllowed, s.snoozesAllowed),
+                    if (s.snoozesAllowed == 0) {
+                        stringResource(R.string.snoozes_none_summary)
+                    } else {
+                        pluralStringResource(R.plurals.snooze_count_from, s.snoozesAllowed, s.snoozesAllowed, s.firstSnoozeMinutes)
+                    },
                 ),
                 tag = "settingsAlarm",
             ) { onOpenSettings(SettingsPageId.ALARM) }

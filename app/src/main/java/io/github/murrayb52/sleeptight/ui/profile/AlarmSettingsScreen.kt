@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.alarm.AlarmSound
+import io.github.murrayb52.sleeptight.alarm.alarmConfig
 import io.github.murrayb52.sleeptight.alarm.snoozeCurveOrDefault
 import io.github.murrayb52.sleeptight.data.Settings
 import io.github.murrayb52.sleeptight.metrics.AlarmConfig
@@ -49,6 +50,9 @@ import io.github.murrayb52.sleeptight.ui.theme.Palette
 
 /** Snoozes the alarm allows: none up to the most the setting takes. */
 private val SNOOZES_ALLOWED = 0f..AlarmConfig().maxSnoozesSetting.toFloat()
+
+/** How long the first snooze can be set to run. */
+private val FIRST_SNOOZE = AlarmConfig().minFirstSnoozeMinutes.toFloat()..AlarmConfig().maxFirstSnoozeMinutes.toFloat()
 
 private enum class AlarmPicker { WINDOW, SOUND }
 
@@ -62,6 +66,7 @@ fun AlarmSettingsRoute(onBack: () -> Unit, viewModel: ProfileViewModel = viewMod
         onSound = viewModel::onSound,
         onSnoozesAllowed = viewModel::onSnoozesAllowed,
         onSnoozeCurve = viewModel::onSnoozeCurve,
+        onFirstSnooze = viewModel::onFirstSnooze,
     )
 }
 
@@ -74,11 +79,13 @@ fun AlarmSettingsScreen(
     onSound: (String?) -> Unit = {},
     onSnoozesAllowed: (Int) -> Unit = {},
     onSnoozeCurve: (SnoozeCurve) -> Unit = {},
+    onFirstSnooze: (Int) -> Unit = {},
 ) {
     val window = Math.floorMod(settings.alarmWindowEndMinutes - settings.alarmWindowStartMinutes, 24 * 60)
     var picker by rememberSaveable { mutableStateOf<AlarmPicker?>(null) }
     // Follows the slider while it's dragged, so the charts change as you go.
     var snoozes by remember(settings.snoozesAllowed) { mutableIntStateOf(settings.snoozesAllowed) }
+    var firstSnooze by remember(settings.firstSnoozeMinutes) { mutableIntStateOf(settings.firstSnoozeMinutes) }
     val curve = settings.snoozeCurveOrDefault()
 
     SettingsPage(stringResource(R.string.settings_alarm), onBack) {
@@ -97,9 +104,18 @@ fun AlarmSettingsScreen(
                 onDone = { onSnoozesAllowed(Math.round(it)) },
                 onChange = { snoozes = Math.round(it) },
                 tag = "snoozesAllowed",
+            )
+            SliderRow(
+                label = stringResource(R.string.first_snooze_row),
+                value = settings.firstSnoozeMinutes.toFloat(),
+                range = FIRST_SNOOZE,
+                valueText = { m -> stringResource(R.string.minutes_short, Math.round(m)) },
+                onDone = { onFirstSnooze(Math.round(it)) },
+                onChange = { firstSnooze = Math.round(it) },
+                tag = "firstSnooze",
                 last = true,
             )
-            SnoozeCurvePicker(snoozes, curve, onSnoozeCurve)
+            SnoozeCurvePicker(snoozes, curve, settings.alarmConfig().copy(firstSnoozeMinutes = firstSnooze), onSnoozeCurve)
         }
     }
 
@@ -123,17 +139,23 @@ fun AlarmSettingsScreen(
  * the curves are all the same, so only the total is shown.
  */
 @Composable
-private fun SnoozeCurvePicker(snoozes: Int, current: SnoozeCurve, onPick: (SnoozeCurve) -> Unit) {
+private fun SnoozeCurvePicker(snoozes: Int, current: SnoozeCurve, config: AlarmConfig, onPick: (SnoozeCurve) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (snoozes >= 2) {
             SectionLabel(stringResource(R.string.snooze_curve_row))
             Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SnoozeCurve.entries.forEach { curve ->
-                    CurveCard(curve, SnoozeLadder.lengths(snoozes, curve), selected = curve == current, onClick = { onPick(curve) }, Modifier.weight(1f))
+                    CurveCard(
+                        curve,
+                        SnoozeLadder.lengths(snoozes, curve, config),
+                        selected = curve == current,
+                        onClick = { onPick(curve) },
+                        Modifier.weight(1f),
+                    )
                 }
             }
         }
-        val total = SnoozeLadder.lengths(snoozes, current).sum()
+        val total = SnoozeLadder.lengths(snoozes, current, config).sum()
         Text(
             if (snoozes == 0) stringResource(R.string.snooze_total_none) else pluralStringResource(R.plurals.snooze_total, total, total),
             style = MaterialTheme.typography.bodySmall,
@@ -157,10 +179,16 @@ private fun CurveCard(curve: SnoozeCurve, lengths: List<Int>, selected: Boolean,
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .semantics { contentDescription = description }
             .testTag("curve_${curve.name}")
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        SnoozeBars(lengths, if (selected) Palette.Ember else Palette.Moon.copy(alpha = 0.55f), Modifier.fillMaxWidth().height(56.dp))
+        // Only the bars are inset: the centred label below needs the card's full width, or
+        // "Exponential" doesn't fit on one line in a third of a 360dp screen.
+        SnoozeBars(
+            lengths,
+            if (selected) Palette.Ember else Palette.Moon.copy(alpha = 0.55f),
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(56.dp),
+        )
         Text(
             name,
             style = MaterialTheme.typography.labelLarge,
@@ -174,7 +202,9 @@ private fun CurveCard(curve: SnoozeCurve, lengths: List<Int>, selected: Boolean,
 /** One bar per snooze, left to right, scaled so the first (longest possible) snooze fills the height. */
 @Composable
 private fun SnoozeBars(lengths: List<Int>, colour: Color, modifier: Modifier = Modifier) {
-    val tallest = AlarmConfig().firstSnoozeMinutes.toFloat()
+    // Scaled against the longest a first snooze can be, so the bars keep their meaning
+    // (and stay inside the card) whatever the first snooze is set to.
+    val tallest = AlarmConfig().maxFirstSnoozeMinutes.toFloat()
     val baseline = Palette.Line
     Canvas(modifier) {
         if (lengths.isEmpty()) return@Canvas

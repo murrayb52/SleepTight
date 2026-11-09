@@ -177,4 +177,30 @@ class MigrationTest {
             db.execSQL("INSERT INTO snooze_events (nightId, timestamp, minutes, curve) VALUES (9, 1500, 9, 'LINEAR')")
         }
     }
+
+    @Test
+    fun version8To9DefaultsTheFirstSnoozeToTenMinutes() {
+        helper.createDatabase(dbName, 8).use { db ->
+            db.execSQL("INSERT INTO nights (id, bedTapAt, wakeTapAt, zoneId, snoozeCount, garminImported) VALUES (10, 1000, 2000, 'Africa/Johannesburg', 3, 0)")
+            db.execSQL(
+                "INSERT INTO settings (id, targetBedtimeMinutes, targetSleepMinutes, maxSnoozes, alarmEnabled, " +
+                    "bedtimeReminderEnabled, bedsideCheckEnabled, earplugsDefault, alarmWindowStartMinutes, alarmWindowEndMinutes, " +
+                    "snoozeMinutes, snoozesAllowed, snoozeCurve, alarmSound, espressoHomeMg, espressoRestaurantMg, decafShotMg, " +
+                    "colaMgPer100Ml, caffeineHalfLifeHours) " +
+                    "VALUES (0, 1320, 480, 1, 1, 1, 1, 1, 345, 375, 9, 5, 'EXPONENTIAL', NULL, 63, 75, 3, 10, 5)",
+            )
+        }
+        helper.runMigrationsAndValidate(dbName, 9, true).use { db ->
+            db.query("SELECT firstSnoozeMinutes, snoozesAllowed, snoozeCurve FROM settings").use { c ->
+                c.moveToFirst()
+                assertEquals(10, c.getInt(0))
+                assertEquals(5, c.getInt(1)) // the snooze settings from version 8 survive
+                assertEquals("EXPONENTIAL", c.getString(2))
+            }
+            db.query("SELECT snoozeCount FROM nights WHERE id = 10").use { c ->
+                c.moveToFirst()
+                assertEquals(3, c.getInt(0))
+            }
+        }
+    }
 }
