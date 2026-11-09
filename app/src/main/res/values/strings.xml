@@ -158,6 +158,14 @@
     <string name="at_most">at most %1$d</string>
     <string name="alarm_window_row">Wake window</string>
     <string name="alarm_sound_row">Sound</string>
+    <string name="snoozes_allowed_row">Snoozes allowed</string>
+    <string name="snoozes_none">None</string>
+    <string name="snooze_curve_row">Snooze lengths</string>
+    <string name="snooze_curve_title">How snoozes shorten</string>
+    <string name="snooze_curve_constant">Constant</string>
+    <string name="snooze_curve_linear">Linear</string>
+    <string name="snooze_curve_exponential">Exponential</string>
+    <string name="snooze_curve_option">%1$s: %2$s min</string>
     <string name="sound_birdsong">Birdsong</string>
     <string name="sound_epiano">Morning piano</string>
     <string name="sound_kalimba_drops">Kalimba drops</string>

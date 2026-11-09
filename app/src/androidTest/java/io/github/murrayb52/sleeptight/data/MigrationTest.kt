@@ -152,4 +152,29 @@ class MigrationTest {
             db.execSQL("INSERT INTO nights (id, bedTapAt, zoneId, snoozeCount, garminImported, appVersion) VALUES (8, 3000, 'Africa/Johannesburg', 0, 0, '0.7.0')")
         }
     }
+
+    @Test
+    fun version7To8DefaultsToFiveLinearSnoozesAndAddsSnoozeEvents() {
+        helper.createDatabase(dbName, 7).use { db ->
+            db.execSQL("INSERT INTO nights (id, bedTapAt, wakeTapAt, zoneId, snoozeCount, garminImported) VALUES (9, 1000, 2000, 'Africa/Johannesburg', 2, 0)")
+            db.execSQL(
+                "INSERT INTO settings (id, targetBedtimeMinutes, targetSleepMinutes, maxSnoozes, alarmEnabled, " +
+                    "bedtimeReminderEnabled, bedsideCheckEnabled, earplugsDefault, alarmWindowStartMinutes, alarmWindowEndMinutes, snoozeMinutes, " +
+                    "alarmSound, espressoHomeMg, espressoRestaurantMg, decafShotMg, colaMgPer100Ml, caffeineHalfLifeHours) " +
+                    "VALUES (0, 1320, 480, 1, 1, 1, 1, 1, 345, 375, 9, NULL, 63, 75, 3, 10, 5)",
+            )
+        }
+        helper.runMigrationsAndValidate(dbName, 8, true).use { db ->
+            db.query("SELECT snoozesAllowed, snoozeCurve FROM settings").use { c ->
+                c.moveToFirst()
+                assertEquals(5, c.getInt(0))
+                assertEquals("LINEAR", c.getString(1))
+            }
+            db.query("SELECT snoozeCount FROM nights WHERE id = 9").use { c ->
+                c.moveToFirst()
+                assertEquals(2, c.getInt(0)) // older snoozes keep their count, without times
+            }
+            db.execSQL("INSERT INTO snooze_events (nightId, timestamp, minutes, curve) VALUES (9, 1500, 9, 'LINEAR')")
+        }
+    }
 }

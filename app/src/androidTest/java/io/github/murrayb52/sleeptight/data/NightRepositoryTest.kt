@@ -112,6 +112,21 @@ class NightRepositoryTest {
     }
 
     @Test
+    fun aSnoozeIsCountedAndRecordedWithItsTimeLengthAndCurve() = runTest {
+        val night = repo.goToBed()
+        clock.advance(Duration.ofHours(8))
+        repo.addSnooze(night.id, minutes = 9, curve = "EXPONENTIAL")
+        clock.advance(Duration.ofMinutes(9))
+        repo.addSnooze(night.id, minutes = 6, curve = "EXPONENTIAL")
+
+        assertEquals(2, repo.getNight(night.id)?.snoozeCount)
+        val events = repo.snoozeEvents(night.id)
+        assertEquals(listOf(9, 6), events.map { it.minutes })
+        assertEquals(clock.now.toEpochMilli(), events.last().timestamp)
+        assertTrue(events.all { it.curve == "EXPONENTIAL" })
+    }
+
+    @Test
     fun settingsDefaultUntilSaved() = runTest {
         assertEquals(Settings(), repo.settings.first())
         repo.updateSettings(Settings(targetSleepMinutes = 450))

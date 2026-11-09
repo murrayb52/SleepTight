@@ -6,6 +6,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.math.ceil
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /** Every alarm threshold, in one place. */
 data class AlarmConfig(
@@ -24,14 +25,14 @@ data class AlarmConfig(
     val rampStartVolume: Float = 0.02f,
     /** ...and reaches full volume after this long, rising evenly in perceived loudness. */
     val rampDuration: Duration = Duration.ofMinutes(3),
-    /** The first snooze. Fixed, not a setting: the ladder is baked in. */
-    val baseSnoozeMinutes: Int = 9,
-    /** After this many snoozes the alarm can only be stopped. */
-    val maxSnoozes: Int = 5,
-    /** Each snooze is this much shorter than the one before... */
-    val snoozeStepMinutes: Int = 2,
-    /** ...but never shorter than this. */
-    val minSnoozeMinutes: Int = 2,
+    /** The first snooze. Every curve starts here. */
+    val firstSnoozeMinutes: Int = 9,
+    /** The last snooze on a decreasing curve (linear or exponential). */
+    val lastSnoozeMinutes: Int = 2,
+    /** Snoozes allowed by default before the alarm can only be stopped (a setting since 2026-11-09). */
+    val defaultSnoozes: Int = 5,
+    /** The most snoozes the setting allows. */
+    val maxSnoozesSetting: Int = 10,
     /** The bedtime reminder comes this long before the bedtime goal. */
     val bedtimeReminderLead: Duration = Duration.ofMinutes(30),
 )
@@ -91,19 +92,44 @@ object VolumeRamp {
     }
 }
 
+/** How snooze lengths change from one snooze to the next. */
+enum class SnoozeCurve {
+    /** Every snooze is the first length. */
+    CONSTANT,
+
+    /** Equal steps from the first length down to the last. */
+    LINEAR,
+
+    /** The same fraction shorter each time, from the first length down to the last: big drops first. */
+    EXPONENTIAL,
+}
+
 /**
- * Snoozes get shorter each time (9 → 7 → 5 → 3 → 2 minutes with the default 9) and run out after
- * [AlarmConfig.maxSnoozes], after which the alarm can only be stopped.
+ * The night's snoozes: [allowed] of them (a setting), with lengths from [AlarmConfig.firstSnoozeMinutes]
+ * following the chosen [SnoozeCurve]. Once they're used up the alarm can only be stopped.
  */
 object SnoozeLadder {
-    /** Length of the next snooze, or null if no snoozes are left. */
-    fun minutesFor(snoozesSoFar: Int, baseMinutes: Int = AlarmConfig().baseSnoozeMinutes, config: AlarmConfig = AlarmConfig()): Int? {
-        if (snoozesSoFar >= config.maxSnoozes) return null
-        return (baseMinutes - config.snoozeStepMinutes * snoozesSoFar).coerceAtLeast(config.minSnoozeMinutes)
+    /** Every snooze length in minutes, in order. Whole minutes, rounded. */
+    fun lengths(allowed: Int, curve: SnoozeCurve, config: AlarmConfig = AlarmConfig()): List<Int> {
+        val n = allowed.coerceIn(0, config.maxSnoozesSetting)
+        val first = config.firstSnoozeMinutes.toDouble()
+        val last = config.lastSnoozeMinutes.toDouble()
+        return List(n) { i ->
+            val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
+            val minutes = when (curve) {
+                SnoozeCurve.CONSTANT -> first
+                SnoozeCurve.LINEAR -> first + (last - first) * t
+                SnoozeCurve.EXPONENTIAL -> first * (last / first).pow(t)
+            }
+            minutes.roundToInt()
+        }
     }
 
-    fun remaining(snoozesSoFar: Int, config: AlarmConfig = AlarmConfig()): Int =
-        (config.maxSnoozes - snoozesSoFar).coerceAtLeast(0)
+    /** Length of the next snooze, or null if no snoozes are left. */
+    fun minutesFor(snoozesSoFar: Int, allowed: Int, curve: SnoozeCurve, config: AlarmConfig = AlarmConfig()): Int? =
+        lengths(allowed, curve, config).getOrNull(snoozesSoFar)
+
+    fun remaining(snoozesSoFar: Int, allowed: Int): Int = (allowed - snoozesSoFar).coerceAtLeast(0)
 }
 
 object BedtimeReminder {

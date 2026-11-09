@@ -89,7 +89,13 @@ class NightRepository(
 
     suspend fun markAlarmFired(nightId: Long, at: Instant = clock.instant()) = nights.markAlarmFired(nightId, at.toEpochMilli())
 
-    suspend fun addSnooze(nightId: Long) = nights.addSnooze(nightId)
+    /** Counts a snooze on the night and records when it was pressed, its length and the curve. */
+    suspend fun addSnooze(nightId: Long, minutes: Int, curve: String, at: Instant = clock.instant()) = db.withTransaction {
+        nights.addSnooze(nightId)
+        db.snoozeEventDao().insert(SnoozeEvent(nightId = nightId, timestamp = at.toEpochMilli(), minutes = minutes, curve = curve))
+    }
+
+    suspend fun snoozeEvents(nightId: Long): List<SnoozeEvent> = db.snoozeEventDao().getForNight(nightId)
 
     /** Per-second relative levels recorded so far for a night, oldest first. */
     suspend fun soundSamples(nightId: Long): List<SoundSample> = db.soundSampleDao().getForNight(nightId)

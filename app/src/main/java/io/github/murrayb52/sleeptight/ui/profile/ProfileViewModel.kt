@@ -11,6 +11,8 @@ import io.github.murrayb52.sleeptight.data.Settings
 import io.github.murrayb52.sleeptight.health.GarminImporter
 import io.github.murrayb52.sleeptight.health.HealthConnectGarminSource
 import io.github.murrayb52.sleeptight.health.SourceStatus
+import io.github.murrayb52.sleeptight.metrics.AlarmConfig
+import io.github.murrayb52.sleeptight.metrics.SnoozeCurve
 import io.github.murrayb52.sleeptight.ui.history.Averages
 import io.github.murrayb52.sleeptight.ui.history.averagesOf
 import io.github.murrayb52.sleeptight.ui.history.toGoals
@@ -57,6 +59,8 @@ class ProfileViewModel(
     fun onBedsideCheck(on: Boolean) = update { it.copy(bedsideCheckEnabled = on) }
     fun onEarplugsDefault(on: Boolean) = update { it.copy(earplugsDefault = on) }
     fun onSound(key: String?) = update { it.copy(alarmSound = key) }
+    fun onSnoozesAllowed(n: Int) = update { it.copy(snoozesAllowed = n.coerceIn(0, AlarmConfig().maxSnoozesSetting)) }
+    fun onSnoozeCurve(curve: SnoozeCurve) = update { it.copy(snoozeCurve = curve.name) }
 
     /** Re-reads Garmin's connection; called whenever Profile comes into view (e.g. back from Health Connect). */
     fun refreshGarmin() {

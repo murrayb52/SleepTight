@@ -52,8 +52,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.alarm.AlarmSound
+import io.github.murrayb52.sleeptight.alarm.snoozeCurveOrDefault
 import io.github.murrayb52.sleeptight.health.HealthConnectGarminSource
 import io.github.murrayb52.sleeptight.health.SourceStatus
+import io.github.murrayb52.sleeptight.metrics.AlarmConfig
+import io.github.murrayb52.sleeptight.metrics.SnoozeCurve
+import io.github.murrayb52.sleeptight.metrics.SnoozeLadder
 import io.github.murrayb52.sleeptight.ui.components.SectionLabel
 import io.github.murrayb52.sleeptight.ui.components.StandardPickerType
 import io.github.murrayb52.sleeptight.ui.history.Tile
@@ -63,13 +67,16 @@ import io.github.murrayb52.sleeptight.ui.theme.Palette
 import java.time.Duration
 import java.time.LocalTime
 
-private enum class Picker { BEDTIME, WINDOW, SOUND }
+private enum class Picker { BEDTIME, WINDOW, SOUND, SNOOZE_CURVE }
 
 /** Sleep goal: whole hours (the notches). */
 private val SLEEP_GOAL_HOURS = 5f..10f
 
-/** Snooze goal: at most 0 to 5, the most the alarm allows. */
+/** Snooze goal: at most 0 to 5 (the alarm itself can allow up to 10). */
 private val SNOOZE_GOAL = 0f..5f
+
+/** Snoozes the alarm allows: none up to the most the setting takes. */
+private val SNOOZES_ALLOWED = 0f..AlarmConfig().maxSnoozesSetting.toFloat()
 
 @Composable
 fun ProfileRoute(onOpenCredits: () -> Unit, viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)) {
@@ -93,6 +100,8 @@ fun ProfileRoute(onOpenCredits: () -> Unit, viewModel: ProfileViewModel = viewMo
         onBedsideCheck = viewModel::onBedsideCheck,
         onEarplugsDefault = viewModel::onEarplugsDefault,
         onSound = viewModel::onSound,
+        onSnoozesAllowed = viewModel::onSnoozesAllowed,
+        onSnoozeCurve = viewModel::onSnoozeCurve,
         onOpenCredits = onOpenCredits,
         onGarmin = {
             when (state.garmin.status) {
@@ -128,6 +137,8 @@ fun ProfileScreen(
     onBedsideCheck: (Boolean) -> Unit = {},
     onEarplugsDefault: (Boolean) -> Unit = {},
     onSound: (String?) -> Unit = {},
+    onSnoozesAllowed: (Int) -> Unit = {},
+    onSnoozeCurve: (SnoozeCurve) -> Unit = {},
     onOpenCredits: () -> Unit = {},
     onGarmin: () -> Unit = {},
 ) {
@@ -173,7 +184,21 @@ fun ProfileScreen(
         }
         Section(stringResource(R.string.section_alarm)) {
             ValueRow(stringResource(R.string.alarm_window_row), stringResource(R.string.window_option, window)) { picker = Picker.WINDOW }
-            ValueRow(stringResource(R.string.alarm_sound_row), stringResource(AlarmSound.of(s.alarmSound).label), last = true) { picker = Picker.SOUND }
+            ValueRow(stringResource(R.string.alarm_sound_row), stringResource(AlarmSound.of(s.alarmSound).label)) { picker = Picker.SOUND }
+            SliderRow(
+                label = stringResource(R.string.snoozes_allowed_row),
+                value = s.snoozesAllowed.toFloat(),
+                range = SNOOZES_ALLOWED,
+                valueText = { n -> if (Math.round(n) == 0) stringResource(R.string.snoozes_none) else Math.round(n).toString() },
+                onDone = { onSnoozesAllowed(Math.round(it)) },
+                tag = "snoozesAllowed",
+            )
+            ValueRow(
+                stringResource(R.string.snooze_curve_row),
+                stringResource(s.snoozeCurveOrDefault().label),
+                enabled = s.snoozesAllowed > 1,
+                last = true,
+            ) { picker = Picker.SNOOZE_CURVE }
         }
         Section(stringResource(R.string.section_reminders)) {
             ToggleRow(stringResource(R.string.reminder_row), s.bedtimeReminderEnabled, onReminder)
@@ -227,6 +252,15 @@ fun ProfileScreen(
             onDismiss = { picker = null },
         )
         Picker.SOUND -> SoundPickerDialog(AlarmSound.of(s.alarmSound), onPick = onSound, onDismiss = { picker = null })
+        Picker.SNOOZE_CURVE -> ChoiceDialog(
+            stringResource(R.string.snooze_curve_title),
+            SnoozeCurve.entries,
+            s.snoozeCurveOrDefault(),
+            // Each option shows the lengths it gives with the number of snoozes allowed now.
+            label = { stringResource(R.string.snooze_curve_option, stringResource(it.label), SnoozeLadder.lengths(s.snoozesAllowed, it).joinToString(", ")) },
+            onPick = { onSnoozeCurve(it); picker = null },
+            onDismiss = { picker = null },
+        )
         null -> Unit
     }
 }
@@ -352,3 +386,10 @@ private fun BedtimeDialog(current: LocalTime, onPick: (LocalTime) -> Unit, onDis
         containerColor = Palette.Card,
     )
 }
+
+private val SnoozeCurve.label: Int
+    get() = when (this) {
+        SnoozeCurve.CONSTANT -> R.string.snooze_curve_constant
+        SnoozeCurve.LINEAR -> R.string.snooze_curve_linear
+        SnoozeCurve.EXPONENTIAL -> R.string.snooze_curve_exponential
+    }

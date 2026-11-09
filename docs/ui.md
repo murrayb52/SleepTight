@@ -48,7 +48,7 @@ Shown over the lock screen when the alarm rings.
 
 - **Sunrise**: the sky starts as night and very slowly brightens through violet and ember, with the sun rising from below the bottom edge. It takes the full 10 minutes an alarm can ring to reach dawn. Full day only comes with I'm up.
 - **I'm up** is pressed and held (1.2 s, filling with amber, like I'm up on Tonight): it silences the alarm **and ends the night** (2026-11-05; until then Stop and I'm up were separate taps, which proved confusing). The sky sweeps to full day in 1.2 s and fades into the **morning summary**: "Good morning", "Here's last night", the dial ("Working out the score…" until it's ready), time in bed, noise events, snoozes and bed → wake, with **See the night** and **Done**.
-- **Swipe up anywhere to snooze.** The screen follows your finger, and a swipe of 140 dp or more snoozes. Snooze lengths are never shown (they're baked in; see [alarm.md](alarm.md)). Five marks show snoozes used. After 5 snoozes the swipe does nothing and the screen says "No snoozes left. Time to get up." Screen readers get a Snooze action.
+- **Swipe up anywhere to snooze.** The screen follows your finger, and a swipe of 140 dp or more snoozes. Snooze lengths aren't shown here (they're chosen in Profile; see [alarm.md](alarm.md#snooze-and-im-up)). One mark per snooze allowed shows how many are used. After the last one the swipe does nothing and the screen says "No snoozes left. Time to get up." Screen readers get a Snooze action.
 
 ## History
 
@@ -70,7 +70,7 @@ Dates and times, then the score dial with time asleep, time to fall asleep and e
 
 All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings:
 - **Goals**: bedtime (clock picker), sleep (a slider, 5–10 h in 1-hour notches), snoozes (a slider, at most 0–5). Sliders save when you let go
-- **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds))
+- **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds)), **snoozes allowed** (a slider, None to 10) and **snooze lengths** (Constant, Linear or Exponential; the picker shows the minutes each gives with the current number of snoozes, and is greyed out below 2 snoozes, where the curves don't differ)
 - **Reminders**: bedtime reminder, bedside check and **Earplugs in by default** switches
 - **Data**: Garmin and export, both coming soon
 - **About**: **Credits and licences**, a page crediting each alarm sound (original title, author, CC0, a link to Freesound) and the Outfit typeface (with its full SIL Open Font License text), and noting that the bedside illustration was made for the app

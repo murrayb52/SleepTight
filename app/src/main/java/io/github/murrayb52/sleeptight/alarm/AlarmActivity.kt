@@ -63,7 +63,6 @@ import io.github.murrayb52.sleeptight.MainActivity
 import io.github.murrayb52.sleeptight.R
 import io.github.murrayb52.sleeptight.SleepTightApplication
 import io.github.murrayb52.sleeptight.data.Night
-import io.github.murrayb52.sleeptight.metrics.AlarmConfig
 import io.github.murrayb52.sleeptight.ui.components.HoldButton
 import io.github.murrayb52.sleeptight.ui.components.ScoreDial
 import io.github.murrayb52.sleeptight.ui.components.SunriseSky
@@ -120,6 +119,7 @@ class AlarmActivity : ComponentActivity() {
                 ringingSince = ringing?.since,
                 nextSnoozeMinutes = ringing?.nextSnoozeMinutes,
                 snoozesUsed = ringing?.snoozesUsed ?: 0,
+                snoozesAllowed = ringing?.snoozesAllowed ?: 0,
                 stopped = stoppedNightId != null,
                 morning = night?.let { morningOf(it, events.size) },
                 onSnooze = { startService(AlarmRingService.intent(this, AlarmRingService.ACTION_SNOOZE)) },
@@ -170,6 +170,7 @@ fun AlarmExperience(
     ringingSince: Instant?,
     nextSnoozeMinutes: Int?,
     snoozesUsed: Int,
+    snoozesAllowed: Int,
     stopped: Boolean,
     morning: MorningUi?,
     onSnooze: () -> Unit,
@@ -202,7 +203,7 @@ fun AlarmExperience(
         SunriseSky(sky.value, Modifier.fillMaxSize(), twinkle = animate)
         AnimatedVisibility(visible = !showMorning, exit = fadeOut(tween(300))) {
             SleepTightTheme {
-                RingingContent(nextSnoozeMinutes, snoozesUsed, stopped, onSnooze, onImUp)
+                RingingContent(nextSnoozeMinutes, snoozesUsed, snoozesAllowed, stopped, onSnooze, onImUp)
             }
         }
         AnimatedVisibility(visible = showMorning, enter = fadeIn(tween(500))) {
@@ -214,7 +215,14 @@ fun AlarmExperience(
 }
 
 @Composable
-private fun RingingContent(nextSnoozeMinutes: Int?, snoozesUsed: Int, stopped: Boolean, onSnooze: () -> Unit, onImUp: () -> Unit) {
+private fun RingingContent(
+    nextSnoozeMinutes: Int?,
+    snoozesUsed: Int,
+    snoozesAllowed: Int,
+    stopped: Boolean,
+    onSnooze: () -> Unit,
+    onImUp: () -> Unit,
+) {
     val time = rememberTimeFormatter()
     val density = LocalDensity.current
     val threshold = with(density) { 140.dp.toPx() }
@@ -271,7 +279,7 @@ private fun RingingContent(nextSnoozeMinutes: Int?, snoozesUsed: Int, stopped: B
 
         Spacer(Modifier.height(28.dp))
         if (canSnooze) {
-            SnoozeMeter(snoozesUsed)
+            SnoozeMeter(snoozesUsed, snoozesAllowed)
             Spacer(Modifier.height(10.dp))
             Text("⌃", style = MaterialTheme.typography.headlineMedium, color = Palette.Text)
             Text(stringResource(R.string.swipe_to_snooze), style = MaterialTheme.typography.titleMedium, color = Palette.Text)
@@ -286,14 +294,16 @@ private fun RingingContent(nextSnoozeMinutes: Int?, snoozesUsed: Int, stopped: B
     }
 }
 
-/** One mark per snooze; used ones in amber. No durations: the ladder is baked in. */
+/** One mark per snooze allowed; used ones in amber. No durations, so you don't plan around them. */
 @Composable
-private fun SnoozeMeter(used: Int) {
+private fun SnoozeMeter(used: Int, allowed: Int) {
+    // Narrower marks when there are many, so ten still fit across a phone.
+    val width = if (allowed > 6) 18.dp else 28.dp
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        repeat(AlarmConfig().maxSnoozes) { i ->
+        repeat(allowed) { i ->
             Box(
                 Modifier
-                    .size(width = 28.dp, height = 5.dp)
+                    .size(width = width, height = 5.dp)
                     .clip(RoundedCornerShape(3.dp))
                     .background(if (i < used) Palette.Ember else Color.White.copy(alpha = 0.35f)),
             )
