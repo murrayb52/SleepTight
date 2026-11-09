@@ -15,7 +15,8 @@ Home has an **Alarm** switch with the window under it (default **05:45–06:15**
 At the bed tap, `WakeWindow.after` picks the next time the start clock time comes round after the bed tap, and the next end time after that, in the night's own time zone:
 
 - A 22:00 bed tap wakes the next morning, and a 01:30 tap the same morning.
-- A bed tap inside the window (say 05:50) gets **tomorrow's** window.
+- A bed tap inside the window (say 05:50 for 05:45–06:15) keeps **today's** window, opened at the tap, so it still rings by 06:15, however close that is. Until 2026-11-09 it got tomorrow's window, so an alarm set for a few minutes after going to bed silently didn't ring. The smart trigger needs 30 minutes of the night first, so a window this short just rings at its end.
+- A bed tap at or after the end (06:15 or later) gets tomorrow's window.
 - A window crossing midnight (23:50–00:20) works, and daylight-saving changes are handled by the zone.
 
 The window is stored on the night (`alarmWindowStart`/`alarmWindowEnd`). If the alarm is disarmed before it ever rang, the window is cleared.

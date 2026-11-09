@@ -42,8 +42,14 @@ data class WakeWindow(val start: Instant, val end: Instant) {
         /**
          * The first wake window after [bedTapAt]: [start] is the next time that local clock time
          * comes round, and [end] the next time its clock time comes round after that.
+         *
+         * A bed tap inside a window (after its start, before its end) keeps that window, opened
+         * at the tap: the wake-by time is what you asked for, even if it's only minutes away.
          */
         fun after(bedTapAt: Instant, zone: ZoneId, start: LocalTime, end: LocalTime): WakeWindow {
+            val opened = nextOccurrence(start, after = bedTapAt, zone).atZone(zone).minusDays(1).toInstant()
+            val openedEnd = nextOccurrence(end, after = opened, zone)
+            if (bedTapAt.isBefore(openedEnd)) return WakeWindow(bedTapAt, openedEnd)
             val s = nextOccurrence(start, after = bedTapAt, zone)
             val e = nextOccurrence(end, after = s, zone)
             return WakeWindow(s, e)

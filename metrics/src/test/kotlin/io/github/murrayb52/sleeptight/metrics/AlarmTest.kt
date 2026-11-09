@@ -27,9 +27,25 @@ class WakeWindowTest {
     }
 
     @Test
-    fun `a bed tap inside the window means tomorrow's window`() {
+    fun `a bed tap inside the window keeps today's wake-by time and opens the window at the tap`() {
+        // Changed 2026-11-09: this used to move to tomorrow, so an alarm set for 10 minutes after
+        // going to bed (with a 30-minute window) silently didn't ring.
         val w = WakeWindow.after(at("2026-11-04T05:50"), ZONE, start, end)
-        assertEquals(at("2026-11-05T05:45"), w.start)
+        assertEquals(at("2026-11-04T05:50"), w.start)
+        assertEquals(at("2026-11-04T06:15"), w.end)
+    }
+
+    @Test
+    fun `a bed tap at the wake-by time or after means tomorrow's window`() {
+        assertEquals(at("2026-11-05T06:15"), WakeWindow.after(at("2026-11-04T06:15"), ZONE, start, end).end)
+        assertEquals(at("2026-11-05T05:45"), WakeWindow.after(at("2026-11-04T06:20"), ZONE, start, end).start)
+    }
+
+    @Test
+    fun `a bed tap inside a window that crossed midnight keeps that window`() {
+        val w = WakeWindow.after(at("2026-11-04T00:05"), ZONE, LocalTime.of(23, 50), LocalTime.of(0, 20))
+        assertEquals(at("2026-11-04T00:05"), w.start)
+        assertEquals(at("2026-11-04T00:20"), w.end)
     }
 
     @Test
