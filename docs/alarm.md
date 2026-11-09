@@ -61,11 +61,14 @@ An unanswered alarm stops after **10 minutes**.
 - **Snooze** adds one to the night's `snoozeCount`, records a `snooze_events` row (when it was pressed, its length and the curve), reschedules the ring, shows "Alarm snoozed until 06:24" with an I'm up action, and calls `AlarmEvents.onSnooze`. The count feeds the regularity snooze factor (goal: at most 1). The rows are for the [snooze investigation](#snooze-investigation).
 - **How many snoozes, and how long** are settings in Profile (since 2026-11-09; before that the ladder was fixed at 9 → 7 → 5 → 3 → 2):
   - **Snoozes allowed**: 0–10, default **5**. After the last one the alarm screen, the notification and Home offer only I'm up, with "No snoozes left. Time to get up." With 0 there's no snooze at all.
-  - **Snooze lengths** (`SnoozeCurve`), always starting at **9 min** (`AlarmConfig.firstSnoozeMinutes`). With *n* snoozes, snooze *i* (0 to *n* − 1) sits at *t* = *i* / (*n* − 1) along the curve, and is rounded to whole minutes:
-    - **Constant**: 9 min every time.
-    - **Linear** (the default): equal steps down to **2 min** (`lastSnoozeMinutes`): 9 + (2 − 9)·*t*. Five snoozes give **9, 7, 6, 4, 2**.
-    - **Exponential**: the same fraction shorter each time, down to 2 min: 9 · (2/9)^*t*. The big drops come first. Five snoozes give **9, 6, 4, 3, 2**.
-  - One snooze is always 9 min. Two decreasing snoozes go straight from 9 to 2.
+  - **First snooze**: 1–10 min, default **10** (`Settings.firstSnoozeMinutes`, schema version 9; a setting since 2026-11-09, fixed at 9 min before that). Every curve starts here, and no snooze is ever longer.
+  - **Snooze lengths** (`SnoozeCurve`), starting at the first snooze *f*. With *n* snoozes, snooze *i* (0 to *n* − 1) sits at *t* = *i* / (*n* − 1) along the curve, and is rounded to whole minutes:
+    - **Constant**: *f* every time.
+    - **Linear** (the default): equal steps down to **2 min** (`lastSnoozeMinutes`): *f* + (2 − *f*)·*t*. Five snoozes from 10 give **10, 8, 6, 4, 2**.
+    - **Exponential**: the same fraction shorter each time, down to 2 min: *f* · (2/*f*)^*t*. The big drops come first. Five snoozes from 10 give **10, 7, 4, 3, 2**.
+  - One snooze is always *f*. Two decreasing snoozes go straight from *f* to 2.
+  - **Snoozes never grow.** Set the first snooze below the 2-minute floor and the floor rises to meet it, so the curve flattens instead of climbing: from 3, linear five snoozes give **3, 3, 3, 2, 2**, and from 1 every snooze is 1 min. The cap and floor are applied in `SnoozeLadder.lengths`, so a stored value out of range can't produce a rising ladder.
+  - The curve charts in Profile scale against `maxFirstSnoozeMinutes` (10), not the current setting, so the bars shrink as you shorten the first snooze rather than being redrawn to the same height.
 - The lengths aren't shown on the alarm screen, only in the Profile picker, so you choose a shape once rather than plan around it each morning. The marks under the alarm show one per snooze allowed (narrower when there are more than 6).
 - The settings are read each time the alarm starts ringing, along with the night's snooze count, so the next length is right after a restart, and a change in Profile applies from the next ring. `Settings.snoozeMinutes` is no longer used.
 - **I'm up** (the press-and-hold button on the alarm screen, or the notification's I'm up action; `ACTION_IM_UP`) stops the sound, cancels pending alarms, calls `AlarmEvents.onDismiss` **and ends the night** (`AppContainer.endNightFromAlarm`: wake tap now, tracking stopped, Garmin import or scoring). Until 2026-11-05 these were two taps, Stop and then I'm up, which was confusing in practice. Emulator-checked end to end (`AlarmImUpTest`).

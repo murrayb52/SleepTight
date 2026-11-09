@@ -274,6 +274,8 @@ data class Settings(
     @ColumnInfo(defaultValue = "5") val snoozesAllowed: Int = 5,
     /** A [io.github.murrayb52.sleeptight.metrics.SnoozeCurve] name. Added in schema version 8. */
     @ColumnInfo(defaultValue = "LINEAR") val snoozeCurve: String = "LINEAR",
+    /** How long the first snooze is; every curve starts here. 1-10. Added in schema version 9. */
+    @ColumnInfo(defaultValue = "10") val firstSnoozeMinutes: Int = 10,
     /** Alarm sound resource name; null means the generated chime. */
     val alarmSound: String? = null,
     val espressoHomeMg: Double = 63.0,

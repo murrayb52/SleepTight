@@ -21,7 +21,7 @@ import androidx.room.RoomDatabase
         WakeNote::class,
         MorningSurvey::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
     autoMigrations = [
         // 1 → 2: Settings.alarmEnabled (defaults to on).
@@ -41,6 +41,8 @@ import androidx.room.RoomDatabase
         // 7 → 8: snooze_events (when each snooze was pressed, its length and curve), and
         // Settings.snoozesAllowed (5) and snoozeCurve (LINEAR). 2026-11-09.
         AutoMigration(from = 7, to = 8),
+        // 8 → 9: Settings.firstSnoozeMinutes, how long the first snooze is (defaults to 10). 2026-11-09.
+        AutoMigration(from = 8, to = 9),
     ],
 )
 abstract class SleepTightDatabase : RoomDatabase() {

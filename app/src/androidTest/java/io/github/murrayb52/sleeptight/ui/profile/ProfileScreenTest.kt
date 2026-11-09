@@ -1,6 +1,7 @@
 package io.github.murrayb52.sleeptight.ui.profile
 
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -29,6 +30,7 @@ class ProfileScreenTest {
     private var snoozeGoal: Int? = null
     private var snoozesAllowed: Int? = null
     private var curve: SnoozeCurve? = null
+    private var firstSnooze: Int? = null
 
     private fun showProfile(settings: Settings = Settings()) = compose.setContent {
         SleepTightTheme { ProfileScreen(ProfileUi(loading = false, settings = settings), onOpenSettings = { opened = it }) }
@@ -39,7 +41,14 @@ class ProfileScreenTest {
     }
 
     private fun showAlarm(settings: Settings = Settings()) = compose.setContent {
-        SleepTightTheme { AlarmSettingsScreen(settings, onSnoozesAllowed = { snoozesAllowed = it }, onSnoozeCurve = { curve = it }) }
+        SleepTightTheme {
+            AlarmSettingsScreen(
+                settings,
+                onSnoozesAllowed = { snoozesAllowed = it },
+                onSnoozeCurve = { curve = it },
+                onFirstSnooze = { firstSnooze = it },
+            )
+        }
     }
 
     @Test
@@ -89,9 +98,9 @@ class ProfileScreenTest {
     @Test
     fun snoozeCurvesAreChartsNotListsOfMinutes() {
         showAlarm(Settings(snoozesAllowed = 5, snoozeCurve = "LINEAR"))
-        compose.onNodeWithText("9, 7, 6, 4, 2", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("10, 8, 6, 4, 2", substring = true).assertDoesNotExist()
         compose.onNodeWithTag("curve_LINEAR").performScrollTo().assertIsSelected()
-        compose.onNodeWithText("Up to 28 min of snoozing", substring = true).assertExists()
+        compose.onNodeWithText("Up to 30 min of snoozing", substring = true).assertExists()
         compose.onNodeWithTag("curve_EXPONENTIAL").performClick()
         assertEquals(SnoozeCurve.EXPONENTIAL, curve)
     }
@@ -100,7 +109,26 @@ class ProfileScreenTest {
     fun withOneSnoozeThereIsNoCurveToChoose() {
         showAlarm(Settings(snoozesAllowed = 1))
         compose.onNodeWithTag("curve_LINEAR").assertDoesNotExist()
-        compose.onNodeWithText("Up to 9 min of snoozing", substring = true).assertExists()
+        compose.onNodeWithText("Up to 10 min of snoozing", substring = true).assertExists()
+    }
+
+    @Test
+    fun firstSnoozeSliderSavesWholeMinutesAndCapsAtTen() {
+        showAlarm()
+        compose.onNodeWithTag("firstSnooze").performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(6.4f) }
+        compose.waitForIdle()
+        assertEquals(6, firstSnooze)
+        compose.onNodeWithTag("firstSnooze").performSemanticsAction(SemanticsActions.SetProgress) { it(99f) }
+        compose.waitForIdle()
+        assertEquals(10, firstSnooze)
+    }
+
+    @Test
+    fun aShortFirstSnoozeFlattensTheCurvesInsteadOfGrowingThem() {
+        showAlarm(Settings(snoozesAllowed = 5, firstSnoozeMinutes = 3, snoozeCurve = "LINEAR"))
+        compose.onNodeWithTag("curve_LINEAR").performScrollTo()
+            .assertContentDescriptionEquals("Linear: snoozes of 3, 3, 3, 2, 2 minutes")
+        compose.onNodeWithText("Up to 13 min of snoozing", substring = true).assertExists()
     }
 
     @Test

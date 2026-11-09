@@ -87,7 +87,7 @@ class AlarmRingService : Service() {
             val settings = repo.getSettings()
             val curve = settings.snoozeCurveOrDefault()
             val used = repo.getNight(nightId)?.snoozeCount ?: 0
-            val next = SnoozeLadder.minutesFor(used, settings.snoozesAllowed, curve)
+            val next = SnoozeLadder.minutesFor(used, settings.snoozesAllowed, curve, settings.alarmConfig())
             val current = state.value
             if (current is AlarmState.Ringing && current.nightId == nightId) {
                 state.value = current.copy(

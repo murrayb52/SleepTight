@@ -25,9 +25,13 @@ data class AlarmConfig(
     val rampStartVolume: Float = 0.02f,
     /** ...and reaches full volume after this long, rising evenly in perceived loudness. */
     val rampDuration: Duration = Duration.ofMinutes(3),
-    /** The first snooze. Every curve starts here. */
-    val firstSnoozeMinutes: Int = 9,
-    /** The last snooze on a decreasing curve (linear or exponential). */
+    /** The first snooze, and the longest. Every curve starts here (a setting since 2026-11-09). */
+    val firstSnoozeMinutes: Int = 10,
+    /** The shortest the first snooze can be set to. */
+    val minFirstSnoozeMinutes: Int = 1,
+    /** The longest the first snooze can be set to, and the full height of the curve charts. */
+    val maxFirstSnoozeMinutes: Int = 10,
+    /** The last snooze on a decreasing curve (linear or exponential), unless the first is shorter. */
     val lastSnoozeMinutes: Int = 2,
     /** Snoozes allowed by default before the alarm can only be stopped (a setting since 2026-11-09). */
     val defaultSnoozes: Int = 5,
@@ -112,14 +116,19 @@ enum class SnoozeCurve {
 
 /**
  * The night's snoozes: [allowed] of them (a setting), with lengths from [AlarmConfig.firstSnoozeMinutes]
- * following the chosen [SnoozeCurve]. Once they're used up the alarm can only be stopped.
+ * (also a setting) following the chosen [SnoozeCurve]. Once they're used up the alarm can only be
+ * stopped. No curve ever climbs: see [lengths].
  */
 object SnoozeLadder {
     /** Every snooze length in minutes, in order. Whole minutes, rounded. */
     fun lengths(allowed: Int, curve: SnoozeCurve, config: AlarmConfig = AlarmConfig()): List<Int> {
         val n = allowed.coerceIn(0, config.maxSnoozesSetting)
-        val first = config.firstSnoozeMinutes.toDouble()
-        val last = config.lastSnoozeMinutes.toDouble()
+        val first = config.firstSnoozeMinutes
+            .coerceIn(config.minFirstSnoozeMinutes, config.maxFirstSnoozeMinutes)
+            .toDouble()
+        // Snoozes never grow: a first snooze shorter than the floor pulls the floor up to meet it,
+        // so the curve flattens instead of climbing.
+        val last = config.lastSnoozeMinutes.toDouble().coerceAtMost(first)
         return List(n) { i ->
             val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
             val minutes = when (curve) {

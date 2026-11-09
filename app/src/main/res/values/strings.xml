@@ -157,6 +157,8 @@
     <string name="alarm_sound_row">Sound</string>
     <string name="snoozes_allowed_row">Snoozes allowed</string>
     <string name="snoozes_none">None</string>
+    <string name="first_snooze_row">First snooze</string>
+    <string name="minutes_short">%1$d min</string>
     <string name="snooze_curve_row">How snoozes shorten</string>
     <string name="snooze_curve_constant">Constant</string>
     <string name="snooze_curve_linear">Linear</string>

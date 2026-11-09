@@ -61,6 +61,9 @@ class ProfileViewModel(
     fun onSound(key: String?) = update { it.copy(alarmSound = key) }
     fun onSnoozesAllowed(n: Int) = update { it.copy(snoozesAllowed = n.coerceIn(0, AlarmConfig().maxSnoozesSetting)) }
     fun onSnoozeCurve(curve: SnoozeCurve) = update { it.copy(snoozeCurve = curve.name) }
+    fun onFirstSnooze(minutes: Int) = update {
+        it.copy(firstSnoozeMinutes = minutes.coerceIn(AlarmConfig().minFirstSnoozeMinutes, AlarmConfig().maxFirstSnoozeMinutes))
+    }
 
     /** Re-reads Garmin's connection; called whenever Profile comes into view (e.g. back from Health Connect). */
     fun refreshGarmin() {

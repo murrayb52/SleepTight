@@ -145,32 +145,68 @@ class VolumeRampTest {
 
 class SnoozeLadderTest {
     @Test
-    fun `constant snoozes are all 9 minutes`() {
-        assertEquals(listOf(9, 9, 9), SnoozeLadder.lengths(3, SnoozeCurve.CONSTANT))
+    fun `constant snoozes are all 10 minutes`() {
+        assertEquals(listOf(10, 10, 10), SnoozeLadder.lengths(3, SnoozeCurve.CONSTANT))
     }
 
     @Test
-    fun `linear snoozes fall in equal steps from 9 to 2 minutes`() {
-        // 9, 7.25, 5.5, 3.75, 2, rounded.
-        assertEquals(listOf(9, 7, 6, 4, 2), SnoozeLadder.lengths(5, SnoozeCurve.LINEAR))
-        assertEquals(listOf(9, 8, 7, 7, 6, 5, 4, 4, 3, 2), SnoozeLadder.lengths(10, SnoozeCurve.LINEAR))
+    fun `linear snoozes fall in equal steps from 10 to 2 minutes`() {
+        assertEquals(listOf(10, 8, 6, 4, 2), SnoozeLadder.lengths(5, SnoozeCurve.LINEAR))
+        assertEquals(listOf(10, 9, 8, 7, 6, 6, 5, 4, 3, 2), SnoozeLadder.lengths(10, SnoozeCurve.LINEAR))
     }
 
     @Test
-    fun `exponential snoozes fall by the same fraction each time, from 9 to 2 minutes`() {
-        // 9, 6.18, 4.24, 2.91, 2: each about 0.69 of the one before, so the big drops come first.
-        assertEquals(listOf(9, 6, 4, 3, 2), SnoozeLadder.lengths(5, SnoozeCurve.EXPONENTIAL))
-        assertEquals(listOf(9, 8, 6, 5, 5, 4, 3, 3, 2, 2), SnoozeLadder.lengths(10, SnoozeCurve.EXPONENTIAL))
+    fun `exponential snoozes fall by the same fraction each time, from 10 to 2 minutes`() {
+        // 10, 6.69, 4.47, 2.99, 2: each about 0.67 of the one before, so the big drops come first.
+        assertEquals(listOf(10, 7, 4, 3, 2), SnoozeLadder.lengths(5, SnoozeCurve.EXPONENTIAL))
+        assertEquals(listOf(10, 8, 7, 6, 5, 4, 3, 3, 2, 2), SnoozeLadder.lengths(10, SnoozeCurve.EXPONENTIAL))
     }
 
     @Test
     fun `one snooze is the first length, two go straight from first to last`() {
         SnoozeCurve.entries.forEach { curve ->
-            assertEquals(listOf(9), SnoozeLadder.lengths(1, curve))
+            assertEquals(listOf(10), SnoozeLadder.lengths(1, curve))
         }
-        assertEquals(listOf(9, 2), SnoozeLadder.lengths(2, SnoozeCurve.LINEAR))
-        assertEquals(listOf(9, 2), SnoozeLadder.lengths(2, SnoozeCurve.EXPONENTIAL))
-        assertEquals(listOf(9, 9), SnoozeLadder.lengths(2, SnoozeCurve.CONSTANT))
+        assertEquals(listOf(10, 2), SnoozeLadder.lengths(2, SnoozeCurve.LINEAR))
+        assertEquals(listOf(10, 2), SnoozeLadder.lengths(2, SnoozeCurve.EXPONENTIAL))
+        assertEquals(listOf(10, 10), SnoozeLadder.lengths(2, SnoozeCurve.CONSTANT))
+    }
+
+    @Test
+    fun `a shorter first snooze flattens the curve instead of letting snoozes grow`() {
+        // The 2-minute floor rises to meet a first snooze set below it, so no snooze is ever
+        // longer than the one before it.
+        val three = AlarmConfig(firstSnoozeMinutes = 3)
+        assertEquals(listOf(3, 3, 3, 2, 2), SnoozeLadder.lengths(5, SnoozeCurve.LINEAR, three))
+        assertEquals(listOf(3, 3, 2, 2, 2), SnoozeLadder.lengths(5, SnoozeCurve.EXPONENTIAL, three))
+        assertEquals(listOf(3, 3, 3, 3, 3), SnoozeLadder.lengths(5, SnoozeCurve.CONSTANT, three))
+
+        val one = AlarmConfig(firstSnoozeMinutes = 1)
+        SnoozeCurve.entries.forEach { curve ->
+            assertEquals(listOf(1, 1, 1, 1, 1), SnoozeLadder.lengths(5, curve, one))
+        }
+    }
+
+    @Test
+    fun `no curve ever climbs, whatever the first snooze is set to`() {
+        (1..AlarmConfig().maxFirstSnoozeMinutes).forEach { first ->
+            SnoozeCurve.entries.forEach { curve ->
+                val lengths = SnoozeLadder.lengths(10, curve, AlarmConfig(firstSnoozeMinutes = first))
+                assertEquals(
+                    "first = $first on $curve climbed: $lengths",
+                    lengths.sortedDescending(),
+                    lengths,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `the first snooze is capped at 10 minutes and never below 1`() {
+        val capped = SnoozeLadder.lengths(3, SnoozeCurve.CONSTANT, AlarmConfig(firstSnoozeMinutes = 30))
+        assertEquals(listOf(10, 10, 10), capped)
+        val floored = SnoozeLadder.lengths(3, SnoozeCurve.CONSTANT, AlarmConfig(firstSnoozeMinutes = 0))
+        assertEquals(listOf(1, 1, 1), floored)
     }
 
     @Test
@@ -182,7 +218,7 @@ class SnoozeLadderTest {
     @Test
     fun `the next snooze follows the ladder, then runs out`() {
         val next = (0..6).map { SnoozeLadder.minutesFor(snoozesSoFar = it, allowed = 5, curve = SnoozeCurve.EXPONENTIAL) }
-        assertEquals(listOf(9, 6, 4, 3, 2, null, null), next)
+        assertEquals(listOf(10, 7, 4, 3, 2, null, null), next)
     }
 
     @Test
