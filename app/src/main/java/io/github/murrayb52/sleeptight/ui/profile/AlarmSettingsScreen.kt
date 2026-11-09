@@ -157,10 +157,16 @@ private fun CurveCard(curve: SnoozeCurve, lengths: List<Int>, selected: Boolean,
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .semantics { contentDescription = description }
             .testTag("curve_${curve.name}")
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        SnoozeBars(lengths, if (selected) Palette.Ember else Palette.Moon.copy(alpha = 0.55f), Modifier.fillMaxWidth().height(56.dp))
+        // Only the bars are inset: the centred label below needs the card's full width, or
+        // "Exponential" doesn't fit on one line in a third of a 360dp screen.
+        SnoozeBars(
+            lengths,
+            if (selected) Palette.Ember else Palette.Moon.copy(alpha = 0.55f),
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(56.dp),
+        )
         Text(
             name,
             style = MaterialTheme.typography.labelLarge,

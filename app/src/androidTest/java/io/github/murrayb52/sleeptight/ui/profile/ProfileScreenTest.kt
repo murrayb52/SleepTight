@@ -8,7 +8,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import io.github.murrayb52.sleeptight.data.Settings
 import io.github.murrayb52.sleeptight.metrics.SnoozeCurve
 import io.github.murrayb52.sleeptight.ui.theme.SleepTightTheme
@@ -99,5 +101,25 @@ class ProfileScreenTest {
         showAlarm(Settings(snoozesAllowed = 1))
         compose.onNodeWithTag("curve_LINEAR").assertDoesNotExist()
         compose.onNodeWithText("Up to 9 min of snoozing", substring = true).assertExists()
+    }
+
+    @Test
+    fun curveLabelsFitOnOneLine() {
+        showAlarm(Settings(snoozesAllowed = 5))
+        SnoozeCurve.entries.forEach { curve ->
+            compose.onNodeWithTag("curve_${curve.name}").performScrollTo()
+            assertEquals("${curve.name} label wrapped", 1, lineCountOf(labelOf(curve)))
+        }
+    }
+
+    private fun labelOf(curve: SnoozeCurve): String =
+        InstrumentationRegistry.getInstrumentation().targetContext.getString(curve.label)
+
+    /** How many lines the label actually laid out on, at the test device's width. */
+    private fun lineCountOf(text: String): Int {
+        val results = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(text, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+        return results.first().lineCount
     }
 }
