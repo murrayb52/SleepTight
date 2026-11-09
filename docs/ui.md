@@ -68,9 +68,9 @@ Dates and times, then the score dial with time asleep, time to fall asleep and e
 
 ## Profile
 
-All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings:
-- **Goals**: bedtime (clock picker), sleep (a slider, 5–10 h in 1-hour notches), snoozes (a slider, at most 0–5). Sliders save when you let go
-- **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds)), **snoozes allowed** (a slider, None to 10) and **snooze lengths** (Constant, Linear or Exponential; the picker shows the minutes each gives with the current number of snoozes, and is greyed out below 2 snoozes, where the curves don't differ)
-- **Reminders**: bedtime reminder, bedside check and **Earplugs in by default** switches
+All-time stats (nights, % in bed by the bedtime goal, snoozes a night), then **Settings**: three rows, each with a one-line summary, that open their own pages (2026-11-09; until then every setting was on Profile itself). The pages have a back button and hide the bottom bar, like Credits.
+- **Alarm** (summary: window, sound, snoozes allowed): wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds)), then **Snoozes**: **snoozes allowed** (a slider, None to 10) and **how snoozes shorten**, three cards side by side (Constant, Linear, Exponential). Each card draws its curve as bars, one per snooze and as tall as it is long, scaled to the 9-minute first snooze; the chosen one is amber and outlined. The cards redraw as the slider moves. There are no minutes in text, only the total underneath ("Up to 28 min of snoozing, then only I'm up"); screen readers get each card's minutes. With fewer than 2 snoozes the curves are all the same, so the cards are hidden.
+- **Notifications** (summary: bedtime reminder on or off): the **bedtime reminder**, then *When you go to bed*: the **bedside check** and **Earplugs in by default**. Each switch has a line saying what it does.
+- **Goals** (summary: bedtime, sleep, snooze goal): bedtime (clock picker), sleep (a slider, 5–10 h in 1-hour notches), snoozes (a slider, at most 0–5). Sliders save when you let go.
 - **Data**: Garmin and export, both coming soon
 - **About**: **Credits and licences**, a page crediting each alarm sound (original title, author, CC0, a link to Freesound) and the Outfit typeface (with its full SIL Open Font License text), and noting that the bedside illustration was made for the app
