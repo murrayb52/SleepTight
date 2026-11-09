@@ -71,6 +71,8 @@ data class NightDetailUi(
     /** The cached score and the measurements behind it; null until the night has been scored. */
     val score: ScoreCache? = null,
     val stages: List<SleepStageSegment> = emptyList(),
+    /** The phone's own asleep/awake estimate from sound, when the score used Garmin's stages instead. */
+    val phoneStages: List<SleepStageSegment> = emptyList(),
     /** Offer "Check for Garmin data": the night has no Garmin stages yet. */
     val canCheckGarmin: Boolean = false,
     val checkingGarmin: Boolean = false,
@@ -119,6 +121,7 @@ class NightDetailViewModel(
             goals = settings.toGoals(),
             score = score,
             stages = segments.filter { it.source == source },
+            phoneStages = if (source == StageSource.GARMIN) segments.filter { it.source == StageSource.ESTIMATED } else emptyList(),
             canCheckGarmin = importer != null && night?.wakeTapAt != null && score?.source != "GARMIN",
             checkingGarmin = checking,
             garminCheck = result,

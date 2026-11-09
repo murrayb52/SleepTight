@@ -27,9 +27,25 @@ class WakeWindowTest {
     }
 
     @Test
-    fun `a bed tap inside the window means tomorrow's window`() {
+    fun `a bed tap inside the window keeps today's wake-by time and opens the window at the tap`() {
+        // Changed 2026-11-09: this used to move to tomorrow, so an alarm set for 10 minutes after
+        // going to bed (with a 30-minute window) silently didn't ring.
         val w = WakeWindow.after(at("2026-11-04T05:50"), ZONE, start, end)
-        assertEquals(at("2026-11-05T05:45"), w.start)
+        assertEquals(at("2026-11-04T05:50"), w.start)
+        assertEquals(at("2026-11-04T06:15"), w.end)
+    }
+
+    @Test
+    fun `a bed tap at the wake-by time or after means tomorrow's window`() {
+        assertEquals(at("2026-11-05T06:15"), WakeWindow.after(at("2026-11-04T06:15"), ZONE, start, end).end)
+        assertEquals(at("2026-11-05T05:45"), WakeWindow.after(at("2026-11-04T06:20"), ZONE, start, end).start)
+    }
+
+    @Test
+    fun `a bed tap inside a window that crossed midnight keeps that window`() {
+        val w = WakeWindow.after(at("2026-11-04T00:05"), ZONE, LocalTime.of(23, 50), LocalTime.of(0, 20))
+        assertEquals(at("2026-11-04T00:05"), w.start)
+        assertEquals(at("2026-11-04T00:20"), w.end)
     }
 
     @Test
@@ -117,33 +133,69 @@ class SmartTriggerTest {
 
 class VolumeRampTest {
     @Test
-    fun `ramps from 10 to 100 percent over 60 seconds`() {
-        assertEquals(0.10f, VolumeRamp.at(Duration.ZERO), 1e-6f)
-        assertEquals(0.55f, VolumeRamp.at(Duration.ofSeconds(30)), 1e-6f)
-        assertEquals(1.00f, VolumeRamp.at(Duration.ofSeconds(60)), 1e-6f)
+    fun `eases in from 2 to 100 percent over 3 minutes, evenly in decibels`() {
+        assertEquals(0.02f, VolumeRamp.at(Duration.ZERO), 1e-6f)
+        // Halfway is the geometric mean, sqrt(0.02 * 1.0), not 51 %.
+        assertEquals(0.1414f, VolumeRamp.at(Duration.ofSeconds(90)), 1e-3f)
+        assertEquals(1.00f, VolumeRamp.at(Duration.ofMinutes(3)), 1e-6f)
         assertEquals(1.00f, VolumeRamp.at(Duration.ofMinutes(5)), 1e-6f)
-        assertEquals(0.10f, VolumeRamp.at(Duration.ofSeconds(-3)), 1e-6f)
+        assertEquals(0.02f, VolumeRamp.at(Duration.ofSeconds(-3)), 1e-6f)
     }
 }
 
 class SnoozeLadderTest {
     @Test
-    fun `each snooze is 2 minutes shorter, down to 2, and there are 5 at most`() {
-        assertEquals(listOf(9, 7, 5, 3, 2), (0 until 5).map { SnoozeLadder.minutesFor(snoozesSoFar = it, baseMinutes = 9) })
-        assertEquals(null, SnoozeLadder.minutesFor(snoozesSoFar = 5, baseMinutes = 9))
-        assertEquals(null, SnoozeLadder.minutesFor(snoozesSoFar = 8, baseMinutes = 9))
+    fun `constant snoozes are all 9 minutes`() {
+        assertEquals(listOf(9, 9, 9), SnoozeLadder.lengths(3, SnoozeCurve.CONSTANT))
     }
 
     @Test
-    fun `a short base snooze bottoms out at 2 minutes`() {
-        assertEquals(listOf(4, 2, 2, 2, 2), (0 until 5).map { SnoozeLadder.minutesFor(it, baseMinutes = 4) })
+    fun `linear snoozes fall in equal steps from 9 to 2 minutes`() {
+        // 9, 7.25, 5.5, 3.75, 2, rounded.
+        assertEquals(listOf(9, 7, 6, 4, 2), SnoozeLadder.lengths(5, SnoozeCurve.LINEAR))
+        assertEquals(listOf(9, 8, 7, 7, 6, 5, 4, 4, 3, 2), SnoozeLadder.lengths(10, SnoozeCurve.LINEAR))
+    }
+
+    @Test
+    fun `exponential snoozes fall by the same fraction each time, from 9 to 2 minutes`() {
+        // 9, 6.18, 4.24, 2.91, 2: each about 0.69 of the one before, so the big drops come first.
+        assertEquals(listOf(9, 6, 4, 3, 2), SnoozeLadder.lengths(5, SnoozeCurve.EXPONENTIAL))
+        assertEquals(listOf(9, 8, 6, 5, 5, 4, 3, 3, 2, 2), SnoozeLadder.lengths(10, SnoozeCurve.EXPONENTIAL))
+    }
+
+    @Test
+    fun `one snooze is the first length, two go straight from first to last`() {
+        SnoozeCurve.entries.forEach { curve ->
+            assertEquals(listOf(9), SnoozeLadder.lengths(1, curve))
+        }
+        assertEquals(listOf(9, 2), SnoozeLadder.lengths(2, SnoozeCurve.LINEAR))
+        assertEquals(listOf(9, 2), SnoozeLadder.lengths(2, SnoozeCurve.EXPONENTIAL))
+        assertEquals(listOf(9, 9), SnoozeLadder.lengths(2, SnoozeCurve.CONSTANT))
+    }
+
+    @Test
+    fun `no snoozes allowed means none at all`() {
+        assertEquals(emptyList<Int>(), SnoozeLadder.lengths(0, SnoozeCurve.LINEAR))
+        assertEquals(null, SnoozeLadder.minutesFor(snoozesSoFar = 0, allowed = 0, curve = SnoozeCurve.LINEAR))
+    }
+
+    @Test
+    fun `the next snooze follows the ladder, then runs out`() {
+        val next = (0..6).map { SnoozeLadder.minutesFor(snoozesSoFar = it, allowed = 5, curve = SnoozeCurve.EXPONENTIAL) }
+        assertEquals(listOf(9, 6, 4, 3, 2, null, null), next)
+    }
+
+    @Test
+    fun `settings outside the allowed range are clamped`() {
+        assertEquals(10, SnoozeLadder.lengths(25, SnoozeCurve.CONSTANT).size)
+        assertEquals(0, SnoozeLadder.lengths(-1, SnoozeCurve.CONSTANT).size)
     }
 
     @Test
     fun `remaining snoozes count down`() {
-        assertEquals(5, SnoozeLadder.remaining(0))
-        assertEquals(1, SnoozeLadder.remaining(4))
-        assertEquals(0, SnoozeLadder.remaining(7))
+        assertEquals(5, SnoozeLadder.remaining(0, allowed = 5))
+        assertEquals(1, SnoozeLadder.remaining(4, allowed = 5))
+        assertEquals(0, SnoozeLadder.remaining(7, allowed = 5))
     }
 }
 

@@ -81,6 +81,27 @@ data class ScreenEvent(
     val type: ScreenEventType,
 )
 
+/**
+ * One snooze: when it was pressed and how long it was set for (database version 8, 2026-11-09).
+ * Kept for the snooze investigation, to compare the sound in each snooze with the curve chosen.
+ * The night's `snoozeCount` stays the count the scores use.
+ */
+@Entity(
+    tableName = "snooze_events",
+    indices = [Index("nightId")],
+    foreignKeys = [
+        ForeignKey(entity = Night::class, parentColumns = ["id"], childColumns = ["nightId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class SnoozeEvent(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val nightId: Long,
+    val timestamp: Long,
+    val minutes: Int,
+    /** The [io.github.murrayb52.sleeptight.metrics.SnoozeCurve] name in use at the time. */
+    val curve: String,
+)
+
 @Entity(
     tableName = "noise_events",
     indices = [Index("nightId")],
@@ -247,8 +268,12 @@ data class Settings(
     @ColumnInfo(defaultValue = "1") val earplugsDefault: Boolean = true,
     val alarmWindowStartMinutes: Int = 5 * 60 + 45,
     val alarmWindowEndMinutes: Int = 6 * 60 + 15,
-    /** Unused since 2026-11-04: snooze lengths are fixed (see SnoozeLadder). Kept so old data reads. */
+    /** Unused since 2026-11-04: lengths come from [snoozeCurve] (see SnoozeLadder). Kept so old data reads. */
     val snoozeMinutes: Int = 9,
+    /** Snoozes the alarm allows before only I'm up is left. Added in schema version 8. */
+    @ColumnInfo(defaultValue = "5") val snoozesAllowed: Int = 5,
+    /** A [io.github.murrayb52.sleeptight.metrics.SnoozeCurve] name. Added in schema version 8. */
+    @ColumnInfo(defaultValue = "LINEAR") val snoozeCurve: String = "LINEAR",
     /** Alarm sound resource name; null means the generated chime. */
     val alarmSound: String? = null,
     val espressoHomeMg: Double = 63.0,

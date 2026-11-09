@@ -21,9 +21,9 @@ import kotlinx.coroutines.withContext
 import java.time.Duration
 
 /**
- * Rings the alarm: plays the chime on the alarm stream with a 10 → 100 % ramp over 60 s (no
- * vibration) and shows a full-screen alarm. Handles snooze (counted, shorter each time, at most 5)
- * and dismiss.
+ * Rings the alarm: plays the chime on the alarm stream with a 2 → 100 % ease-in over 3 minutes (no
+ * vibration) and shows a full-screen alarm. Handles snooze (counted and recorded, with the number
+ * and lengths set in Profile) and dismiss.
  */
 class AlarmRingService : Service() {
     private val container get() = (application as SleepTightApplication).container
@@ -83,11 +83,19 @@ class AlarmRingService : Service() {
             }
             repo.markAlarmFired(nightId, now)
             // Work out the next snooze, then offer it (or not) on the screen and the notification.
+            // The snooze settings as they are now, so a change in Profile applies from the next ring.
+            val settings = repo.getSettings()
+            val curve = settings.snoozeCurveOrDefault()
             val used = repo.getNight(nightId)?.snoozeCount ?: 0
-            val next = SnoozeLadder.minutesFor(used)
+            val next = SnoozeLadder.minutesFor(used, settings.snoozesAllowed, curve)
             val current = state.value
             if (current is AlarmState.Ringing && current.nightId == nightId) {
-                state.value = current.copy(nextSnoozeMinutes = next, snoozesUsed = used)
+                state.value = current.copy(
+                    nextSnoozeMinutes = next,
+                    snoozesUsed = used,
+                    snoozesAllowed = settings.snoozesAllowed,
+                    snoozeCurve = curve.name,
+                )
                 Notifications.updateAlarmRinging(this@AlarmRingService, next)
             }
         }
@@ -114,7 +122,7 @@ class AlarmRingService : Service() {
         stopSound()
         container.appScope.launch {
             val repo = container.nightRepository
-            repo.addSnooze(ringing.nightId)
+            repo.addSnooze(ringing.nightId, minutes, ringing.snoozeCurve)
             val count = repo.getNight(ringing.nightId)?.snoozeCount ?: 0
             val until = container.clock.instant().plus(Duration.ofMinutes(minutes.toLong()))
             container.alarmScheduler.scheduleRing(ringing.nightId, until)

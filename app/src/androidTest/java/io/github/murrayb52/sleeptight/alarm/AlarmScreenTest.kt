@@ -33,6 +33,7 @@ class AlarmScreenTest {
                 ringingSince = since,
                 nextSnoozeMinutes = next,
                 snoozesUsed = used,
+                snoozesAllowed = 5,
                 stopped = stopped,
                 morning = morning,
                 onSnooze = { snoozes++ },

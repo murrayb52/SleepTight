@@ -14,13 +14,14 @@ import androidx.room.RoomDatabase
         SleepStageSegment::class,
         HeartRateSample::class,
         ScreenEvent::class,
+        SnoozeEvent::class,
         CaffeineEntry::class,
         Settings::class,
         NightContext::class,
         WakeNote::class,
         MorningSurvey::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     autoMigrations = [
         // 1 → 2: Settings.alarmEnabled (defaults to on).
@@ -37,6 +38,9 @@ import androidx.room.RoomDatabase
         AutoMigration(from = 5, to = 6),
         // 6 → 7: Night.appVersion, the build that recorded the night (null for older nights). 2026-11-06.
         AutoMigration(from = 6, to = 7),
+        // 7 → 8: snooze_events (when each snooze was pressed, its length and curve), and
+        // Settings.snoozesAllowed (5) and snoozeCurve (LINEAR). 2026-11-09.
+        AutoMigration(from = 7, to = 8),
     ],
 )
 abstract class SleepTightDatabase : RoomDatabase() {
@@ -46,6 +50,7 @@ abstract class SleepTightDatabase : RoomDatabase() {
     abstract fun sleepStageSegmentDao(): SleepStageSegmentDao
     abstract fun heartRateSampleDao(): HeartRateSampleDao
     abstract fun screenEventDao(): ScreenEventDao
+    abstract fun snoozeEventDao(): SnoozeEventDao
     abstract fun caffeineEntryDao(): CaffeineEntryDao
     abstract fun settingsDao(): SettingsDao
     abstract fun diaryDao(): DiaryDao

@@ -56,7 +56,11 @@ import io.github.murrayb52.sleeptight.ui.diary.DiaryPrompts
 import io.github.murrayb52.sleeptight.ui.history.HistoryRoute
 import io.github.murrayb52.sleeptight.ui.history.NightDetailRoute
 import io.github.murrayb52.sleeptight.ui.home.HomeRoute
+import io.github.murrayb52.sleeptight.ui.profile.AlarmSettingsRoute
 import io.github.murrayb52.sleeptight.ui.profile.CreditsScreen
+import io.github.murrayb52.sleeptight.ui.profile.GoalSettingsRoute
+import io.github.murrayb52.sleeptight.ui.profile.NotificationSettingsRoute
+import io.github.murrayb52.sleeptight.ui.profile.SettingsPageId
 import io.github.murrayb52.sleeptight.ui.profile.ProfileRoute
 import io.github.murrayb52.sleeptight.ui.theme.Palette
 import java.time.format.DateTimeFormatter
@@ -65,6 +69,7 @@ private enum class Tab(val route: String, val label: Int) { SLEEP("sleep", R.str
 
 private const val NIGHT_ROUTE = "night/{id}"
 private const val CREDITS_ROUTE = "credits"
+private const val SETTINGS_ROUTE = "settings/{page}"
 
 /** The app: three tabs with a bottom bar, plus a night's detail page. [openNightId] jumps straight to one. */
 @Composable
@@ -80,13 +85,24 @@ fun SleepTightApp(openNightId: Long? = null) {
     }
 
     // No nav bar in bed (nothing to fiddle with at night) or on a night's page.
-    val showBar = route != NIGHT_ROUTE && route != CREDITS_ROUTE && !(route == Tab.SLEEP.route && openNight != null)
+    val showBar = route != NIGHT_ROUTE && route != CREDITS_ROUTE && route != SETTINGS_ROUTE && !(route == Tab.SLEEP.route && openNight != null)
     Column(Modifier.fillMaxSize().background(Palette.Sky)) {
         Box(Modifier.weight(1f)) {
             NavHost(nav, startDestination = Tab.SLEEP.route) {
                 composable(Tab.SLEEP.route) { HomeRoute() }
                 composable(Tab.HISTORY.route) { HistoryRoute(onOpenNight = { nav.navigate("night/$it") }) }
-                composable(Tab.PROFILE.route) { ProfileRoute(onOpenCredits = { nav.navigate(CREDITS_ROUTE) }) }
+                composable(Tab.PROFILE.route) {
+                    ProfileRoute(onOpenCredits = { nav.navigate(CREDITS_ROUTE) }, onOpenSettings = { nav.navigate("settings/${it.name}") })
+                }
+                composable(SETTINGS_ROUTE) { e ->
+                    val back = { nav.popBackStack(); Unit }
+                    when (e.arguments?.getString("page")?.let { p -> SettingsPageId.entries.firstOrNull { it.name == p } }) {
+                        SettingsPageId.ALARM -> AlarmSettingsRoute(onBack = back)
+                        SettingsPageId.NOTIFICATIONS -> NotificationSettingsRoute(onBack = back)
+                        SettingsPageId.GOALS -> GoalSettingsRoute(onBack = back)
+                        null -> LaunchedEffect(Unit) { nav.popBackStack() }
+                    }
+                }
                 composable(CREDITS_ROUTE) { CreditsScreen(onBack = { nav.popBackStack() }) }
                 composable(NIGHT_ROUTE, arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
                     NightDetailRoute(e.arguments?.getLong("id") ?: 0, onBack = { nav.popBackStack() })

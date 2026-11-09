@@ -148,9 +148,6 @@
     <string name="stat_nights">nights</string>
     <string name="stat_by_goal">in bed by %1$s</string>
     <string name="stat_snoozes">snoozes a night</string>
-    <string name="section_goals">Goals</string>
-    <string name="section_alarm">Alarm</string>
-    <string name="section_reminders">Reminders</string>
     <string name="section_data">Data</string>
     <string name="goal_bedtime">Bedtime</string>
     <string name="goal_sleep">Sleep</string>
@@ -158,13 +155,39 @@
     <string name="at_most">at most %1$d</string>
     <string name="alarm_window_row">Wake window</string>
     <string name="alarm_sound_row">Sound</string>
+    <string name="snoozes_allowed_row">Snoozes allowed</string>
+    <string name="snoozes_none">None</string>
+    <string name="snooze_curve_row">How snoozes shorten</string>
+    <string name="snooze_curve_constant">Constant</string>
+    <string name="snooze_curve_linear">Linear</string>
+    <string name="snooze_curve_exponential">Exponential</string>
+    <string name="snooze_curve_a11y">%1$s: snoozes of %2$s minutes</string>
+    <plurals name="snooze_total">
+        <item quantity="one">Up to %d min of snoozing, then only I\'m up</item>
+        <item quantity="other">Up to %d min of snoozing, then only I\'m up</item>
+    </plurals>
+    <string name="snooze_total_none">No snoozes: only I\'m up stops the alarm</string>
+    <string name="snoozes_none_summary">no snoozes</string>
+    <string name="section_snoozes">Snoozes</string>
+    <string name="section_settings">Settings</string>
+    <string name="settings_alarm">Alarm</string>
+    <string name="settings_alarm_summary">%1$s window · %2$s · %3$s</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_summary_on">Bedtime reminder on</string>
+    <string name="settings_notifications_summary_off">Bedtime reminder off</string>
+    <string name="settings_goals">Goals</string>
+    <string name="settings_goals_summary">%1$s · %2$s · %3$s</string>
+    <string name="section_at_bed_tap">When you go to bed</string>
+    <string name="reminder_detail">A notification 30 minutes before your bedtime goal</string>
+    <string name="bedside_detail">Charger, nightstand and mic, checked as you go to bed</string>
+    <string name="earplugs_default_detail">Whether Earplugs in starts switched on</string>
     <string name="sound_birdsong">Birdsong</string>
     <string name="sound_epiano">Morning piano</string>
     <string name="sound_kalimba_drops">Kalimba drops</string>
     <string name="sound_kalimba">Kalimba</string>
     <string name="sound_credit_short">by %1$s · CC0 · Freesound</string>
     <string name="sound_preview_hint">Tap a sound to hear it at your alarm volume. On the night, it starts quietly and rises over a minute.</string>
-    <string name="reminder_row">30 min before bedtime</string>
+    <string name="reminder_row">Bedtime reminder</string>
     <string name="bedside_row">Bedside check</string>
     <string name="data_garmin">Garmin via Health Connect</string>
     <string name="data_export">Export to a file</string>
@@ -266,6 +289,9 @@
 
     <!-- Morning report -->
     <string name="how_you_slept">How you slept</string>
+    <string name="phone_record_title">Recorded by this phone</string>
+    <string name="phone_record_note">Estimated from overnight sound. Garmin\'s stages are used for the score; this is the phone\'s own view of the night.</string>
+    <string name="metric_wake_ups">Wake-ups</string>
     <string name="metric_total_sleep">Total sleep</string>
     <string name="metric_efficiency">Efficiency</string>
     <string name="metric_fall_asleep">Time to fall asleep</string>

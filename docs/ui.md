@@ -48,7 +48,7 @@ Shown over the lock screen when the alarm rings.
 
 - **Sunrise**: the sky starts as night and very slowly brightens through violet and ember, with the sun rising from below the bottom edge. It takes the full 10 minutes an alarm can ring to reach dawn. Full day only comes with I'm up.
 - **I'm up** is pressed and held (1.2 s, filling with amber, like I'm up on Tonight): it silences the alarm **and ends the night** (2026-11-05; until then Stop and I'm up were separate taps, which proved confusing). The sky sweeps to full day in 1.2 s and fades into the **morning summary**: "Good morning", "Here's last night", the dial ("Working out the score…" until it's ready), time in bed, noise events, snoozes and bed → wake, with **See the night** and **Done**.
-- **Swipe up anywhere to snooze.** The screen follows your finger, and a swipe of 140 dp or more snoozes. Snooze lengths are never shown (they're baked in; see [alarm.md](alarm.md)). Five marks show snoozes used. After 5 snoozes the swipe does nothing and the screen says "No snoozes left. Time to get up." Screen readers get a Snooze action.
+- **Swipe up anywhere to snooze.** The screen follows your finger, and a swipe of 140 dp or more snoozes. Snooze lengths aren't shown here (they're chosen in Profile; see [alarm.md](alarm.md#snooze-and-im-up)). One mark per snooze allowed shows how many are used. After the last one the swipe does nothing and the screen says "No snoozes left. Time to get up." Screen readers get a Snooze action.
 
 ## History
 
@@ -59,6 +59,7 @@ Shown over the lock screen when the alarm rings.
 Dates and times, then the score dial with time asleep, time to fall asleep and efficiency, the alarm time and snoozes, and where the data came from ("Sleep stages from Garmin" or "Estimated from overnight sound"). Then:
 - **How the score adds up**: each part with its points out of its maximum (scaled up when Deep + REM's points are shared out), the measurement behind it (7 h 29 min, 93 %, 1 wake-up and 1 noise cluster, bed time and snoozes) and a bar. Before a night is scored, parts show "– / 35".
 - **Sleep stages**: a chart from bed to wake. Garmin nights get four rows (awake, REM, light, deep); estimated nights get two (awake, asleep), since there's no stage estimate. **Check for Garmin data** sits here while the night has no Garmin stages
+- **Recorded by this phone** (Garmin nights only): the phone's own asleep/awake chart from overnight sound, with its total sleep, time to fall asleep, efficiency and wake-ups, so they can be compared with Garmin's. Garmin often reports no awake time at all (it saw none on 8–9 Nov), while the phone may count several wake-ups. The score uses Garmin's. Hidden when the night has no sound recording.
 - **How you slept** (the morning report, step 6): total sleep, efficiency, time to fall asleep, and with Garmin deep and REM shares, each beside its healthy reference range (`ReferenceRanges`) marked **In range**, **Below** or **Above**; plus lowest and average heart rate from Garmin
 - **Your goals**: in bed by the bedtime goal, asleep for the sleep goal, snoozes within the limit, and a steady bedtime this week, each **Met** (✓), **Partly** (◐), **Missed** (✕) or **Not yet** (needs 3 nights), from the night's regularity factors
 - **Delete this night** at the bottom, after a confirmation: removes it with everything recorded in it
@@ -68,9 +69,9 @@ Dates and times, then the score dial with time asleep, time to fall asleep and e
 
 ## Profile
 
-All-time stats (nights, % in bed by the bedtime goal, snoozes a night). Settings:
-- **Goals**: bedtime (clock picker), sleep (a slider, 5–10 h in 1-hour notches), snoozes (a slider, at most 0–5). Sliders save when you let go
-- **Alarm**: wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds))
-- **Reminders**: bedtime reminder, bedside check and **Earplugs in by default** switches
+All-time stats (nights, % in bed by the bedtime goal, snoozes a night), then **Settings**: three rows, each with a one-line summary, that open their own pages (2026-11-09; until then every setting was on Profile itself). The pages have a back button and hide the bottom bar, like Credits.
+- **Alarm** (summary: window, sound, snoozes allowed): wake window, sound (a picker with previews and each sound's credit; see [alarm.md](alarm.md#sounds)), then **Snoozes**: **snoozes allowed** (a slider, None to 10) and **how snoozes shorten**, three cards side by side (Constant, Linear, Exponential). Each card draws its curve as bars, one per snooze and as tall as it is long, scaled to the 9-minute first snooze; the chosen one is amber and outlined. The cards redraw as the slider moves. There are no minutes in text, only the total underneath ("Up to 28 min of snoozing, then only I'm up"); screen readers get each card's minutes. With fewer than 2 snoozes the curves are all the same, so the cards are hidden.
+- **Notifications** (summary: bedtime reminder on or off): the **bedtime reminder**, then *When you go to bed*: the **bedside check** and **Earplugs in by default**. Each switch has a line saying what it does.
+- **Goals** (summary: bedtime, sleep, snooze goal): bedtime (clock picker), sleep (a slider, 5–10 h in 1-hour notches), snoozes (a slider, at most 0–5). Sliders save when you let go.
 - **Data**: Garmin and export, both coming soon
 - **About**: **Credits and licences**, a page crediting each alarm sound (original title, author, CC0, a link to Freesound) and the Outfit typeface (with its full SIL Open Font License text), and noting that the bedside illustration was made for the app

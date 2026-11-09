@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.murrayb52.sleeptight.R
+import io.github.murrayb52.sleeptight.data.SleepStageSegment
 import io.github.murrayb52.sleeptight.health.GarminImporter
 import io.github.murrayb52.sleeptight.metrics.Goals
 import io.github.murrayb52.sleeptight.metrics.RangeVerdict
@@ -246,6 +247,9 @@ fun NightDetailScreen(
             }
         }
 
+        val phone = score?.phone
+        if (phone != null && state.phoneStages.isNotEmpty()) PhoneRecord(phone, state.phoneStages, night)
+
         if (m != null && score.total != null) HowYouSlept(m, state.heartRate)
         score?.let { if (it.total != null) YourGoals(it.regularity, state.goals, night) }
 
@@ -343,6 +347,31 @@ private fun MetricRow(name: String, value: String, range: String, verdict: Range
                 )
             }
         }
+    }
+}
+
+/**
+ * What the phone recorded on its own, from overnight sound, on a night scored from Garmin's stages:
+ * its asleep/awake chart and measurements, so they can be compared with Garmin's.
+ */
+@Composable
+private fun PhoneRecord(m: ScoreCache.Metrics, stages: List<SleepStageSegment>, night: NightRowUi) {
+    Panel(Modifier.testTag("phoneRecord")) {
+        Text(stringResource(R.string.phone_record_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.phone_record_note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+        Hypnogram(stages, night, estimated = true)
+        m.totalSleepMinutes?.let { PhoneRow(stringResource(R.string.metric_total_sleep), formatDuration(Duration.ofMinutes(it))) }
+        m.timeToFallAsleepMinutes?.let { PhoneRow(stringResource(R.string.metric_fall_asleep), formatDuration(Duration.ofMinutes(it))) }
+        m.efficiency?.let { PhoneRow(stringResource(R.string.metric_efficiency), stringResource(R.string.raw_percent, percent(it))) }
+        m.wakeUps?.let { PhoneRow(stringResource(R.string.metric_wake_ups), it.toString()) }
+    }
+}
+
+@Composable
+private fun PhoneRow(name: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(name, style = MaterialTheme.typography.bodyLarge)
+        Text(value, style = MaterialTheme.typography.titleMedium)
     }
 }
 

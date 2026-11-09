@@ -6,11 +6,11 @@ How the numbers behind a night are worked out. All of it lives in the pure-Kotli
 
 `scoreNight` (in `app/.../scoring/`) turns one closed night's stored data into a score; `NightScorer` does the database work around it.
 
-- **Which sleep data**: Garmin segments if the night has any; otherwise the estimate from sound (below), which is stored as `ESTIMATED` segments so the night's page can draw it. Without either, the night has no score but keeps its time in bed and noise events.
+- **Which sleep data**: Garmin segments if the night has any; otherwise the estimate from sound (below). The estimate is made and stored as `ESTIMATED` segments **either way** (since 2026-11-09), so the phone's own record of a Garmin night can still be seen: its measurements go in the cache's `phone` block, and the night's page shows them under "Recorded by this phone". The score never uses them when Garmin has the night. Without either, the night has no score but keeps its time in bed and noise events.
 - **Inputs**: the taps, those segments, the noise events, the snooze count, the bed taps of the nights before (for consistency) and the goals from Settings.
 - **Cache**: the result (score, parts with points and maximum, the measurements behind them, the regularity factors and the data source) is stored as JSON in `Night.scoreJson` (`ScoreCache`). Screens read the cache, never recompute. It carries a `version`; raising `ScoreCache.VERSION` makes every night rescore on the next app start.
 - **When it runs**: straight after I'm up (from Tonight, the alarm screen, or closing an overdue night); on every app start for nights with no score or an old version; and for every night when the bedtime, sleep or snooze goal changes. It's always derivable from stored data, so running it again is safe.
-- The sound table is only read when a night needs an estimate.
+- The sound table is read for every night scored, because every night gets an estimate. `ScoreCache` version 3 (2026-11-09) adds `phone`, so every night is rescored once on the next app start, which also gives older Garmin nights their phone record.
 
 ## Inputs
 

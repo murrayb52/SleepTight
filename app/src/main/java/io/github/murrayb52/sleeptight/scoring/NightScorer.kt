@@ -26,18 +26,12 @@ class NightScorer(private val db: SleepTightDatabase) {
         // Consistency looks back 7 nights; fetch a little more so time zones can't trim the edge.
         val history = nights.getClosedNightsBetween(night.bedTapAt - Duration.ofDays(9).toMillis(), night.bedTapAt)
         val stored = segments.getForNight(nightId)
-        // The sound table is large, so only read it when there's no Garmin data and an estimate is needed.
-        val sound = if (stored.any { it.source == StageSource.GARMIN }) {
-            emptyList()
-        } else {
-            db.soundSampleDao().getForNight(nightId).map { LevelSample(Instant.ofEpochMilli(it.timestamp), it.dbRelative.toDouble()) }
-        }
+        // Read even when Garmin has the night: the phone's own estimate is kept beside Garmin's.
+        val sound = db.soundSampleDao().getForNight(nightId).map { LevelSample(Instant.ofEpochMilli(it.timestamp), it.dbRelative.toDouble()) }
         val scored = scoreNight(night, stored, db.noiseEventDao().getForNight(nightId), history, goals, sound)
         db.withTransaction {
-            scored.estimatedSegments?.let {
-                segments.deleteForNight(nightId, StageSource.ESTIMATED)
-                segments.insertAll(it)
-            }
+            segments.deleteForNight(nightId, StageSource.ESTIMATED)
+            segments.insertAll(scored.estimatedSegments)
             nights.setScoreJson(nightId, scored.cache.encode())
         }
         Log.i(TAG, "Night $nightId (${Instant.ofEpochMilli(wake)}) scored ${scored.cache.total} from ${scored.cache.source}")

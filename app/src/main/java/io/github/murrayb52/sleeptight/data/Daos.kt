@@ -191,6 +191,15 @@ interface ScreenEventDao {
     suspend fun getForNight(nightId: Long): List<ScreenEvent>
 }
 
+@Dao
+interface SnoozeEventDao {
+    @Insert
+    suspend fun insert(event: SnoozeEvent): Long
+
+    @Query("SELECT * FROM snooze_events WHERE nightId = :nightId ORDER BY timestamp")
+    suspend fun getForNight(nightId: Long): List<SnoozeEvent>
+}
+
 /** The sleep diary: bed-tap context, wake notes and the morning survey. */
 @Dao
 interface DiaryDao {

@@ -44,6 +44,7 @@ All instants are epoch milliseconds (UTC). Every per-night table cascades on del
 | `noise_events` | id, nightId, start, end, peakDbRelative | |
 | `sleep_stage_segments` | id, nightId, start, end, stage, source | stage: AWAKE / LIGHT / DEEP / REM / UNKNOWN; source: GARMIN / ESTIMATED |
 | `heart_rate_samples` | nightId, timestamp, bpm | Key (nightId, timestamp) |
+| `snooze_events` | id, nightId, timestamp, minutes, curve | One per snooze, from database version 8. curve: CONSTANT / LINEAR / EXPONENTIAL. `snoozeCount` on the night stays the count the scores use |
 | `caffeine_entries` | id, timestamp, drinkType, decaf?, venue?, shots?, volumeMl?, mg | drinkType: COFFEE / COKE / COKE_ZERO. Coffee uses decaf, venue, shots; soft drinks use volumeMl. `mg` is resolved at log time and editable |
 | `settings` | one row (id 0) | Defaults below |
 
@@ -57,7 +58,8 @@ Enums are stored by name.
 | Target sleep | 8 h |
 | Max snoozes | 1 |
 | Alarm window | 05:45–06:15 |
-| Snooze length | 9 min |
+| Snoozes allowed | 5 |
+| Snooze lengths | Linear, 9 → 2 min (9, 7, 6, 4, 2) |
 | Alarm sound | Birdsong |
 | Espresso shot, home / restaurant | 63 / 75 mg |
 | Decaf shot | 3 mg |
