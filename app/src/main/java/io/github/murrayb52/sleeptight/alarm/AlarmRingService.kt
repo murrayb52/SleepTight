@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 import java.time.Duration
 
 /**
- * Rings the alarm: plays the chime on the alarm stream with a 10 → 100 % ramp over 60 s (no
+ * Rings the alarm: plays the chime on the alarm stream with a 2 → 100 % ease-in over 3 minutes (no
  * vibration) and shows a full-screen alarm. Handles snooze (counted, shorter each time, at most 5)
  * and dismiss.
  */

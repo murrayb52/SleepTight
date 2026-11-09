@@ -5,6 +5,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.math.ceil
+import kotlin.math.pow
 
 /** Every alarm threshold, in one place. */
 data class AlarmConfig(
@@ -19,10 +20,10 @@ data class AlarmConfig(
     val minActiveSeconds: Double = 3.0,
     /** No early trigger until the night has this many minutes of activity data. */
     val minHistoryMinutes: Int = 30,
-    /** Volume ramp: starts at this fraction... */
-    val rampStartVolume: Float = 0.10f,
-    /** ...and reaches full volume after this long. */
-    val rampDuration: Duration = Duration.ofSeconds(60),
+    /** Volume ramp: starts at this fraction (barely audible)... */
+    val rampStartVolume: Float = 0.02f,
+    /** ...and reaches full volume after this long, rising evenly in perceived loudness. */
+    val rampDuration: Duration = Duration.ofMinutes(3),
     /** The first snooze. Fixed, not a setting: the ladder is baked in. */
     val baseSnoozeMinutes: Int = 9,
     /** After this many snoozes the alarm can only be stopped. */
@@ -79,10 +80,14 @@ object SmartTrigger {
 }
 
 object VolumeRamp {
-    /** Alarm volume (0..1) after ringing for [elapsed]. */
+    /**
+     * Alarm volume (0..1) after ringing for [elapsed]. Exponential in amplitude (a constant number
+     * of dB per second), because hearing is logarithmic: a linear ramp is nearly full volume
+     * within the first third of its length.
+     */
     fun at(elapsed: Duration, config: AlarmConfig = AlarmConfig()): Float {
         val progress = (elapsed.toMillis().toFloat() / config.rampDuration.toMillis()).coerceIn(0f, 1f)
-        return config.rampStartVolume + (1f - config.rampStartVolume) * progress
+        return config.rampStartVolume * (1f / config.rampStartVolume).pow(progress)
     }
 }
 

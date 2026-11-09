@@ -117,12 +117,13 @@ class SmartTriggerTest {
 
 class VolumeRampTest {
     @Test
-    fun `ramps from 10 to 100 percent over 60 seconds`() {
-        assertEquals(0.10f, VolumeRamp.at(Duration.ZERO), 1e-6f)
-        assertEquals(0.55f, VolumeRamp.at(Duration.ofSeconds(30)), 1e-6f)
-        assertEquals(1.00f, VolumeRamp.at(Duration.ofSeconds(60)), 1e-6f)
+    fun `eases in from 2 to 100 percent over 3 minutes, evenly in decibels`() {
+        assertEquals(0.02f, VolumeRamp.at(Duration.ZERO), 1e-6f)
+        // Halfway is the geometric mean, sqrt(0.02 * 1.0), not 51 %.
+        assertEquals(0.1414f, VolumeRamp.at(Duration.ofSeconds(90)), 1e-3f)
+        assertEquals(1.00f, VolumeRamp.at(Duration.ofMinutes(3)), 1e-6f)
         assertEquals(1.00f, VolumeRamp.at(Duration.ofMinutes(5)), 1e-6f)
-        assertEquals(0.10f, VolumeRamp.at(Duration.ofSeconds(-3)), 1e-6f)
+        assertEquals(0.02f, VolumeRamp.at(Duration.ofSeconds(-3)), 1e-6f)
     }
 }
 

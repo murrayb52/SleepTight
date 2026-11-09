@@ -22,7 +22,7 @@ The v1 build order is in the [v1 plan](plan/2026-11-04-v1-build-plan.md), and pr
 | **Press-and-hold I'm up** | [ui.md](ui.md#tonight-sleep-tab-in-bed) |
 | **Bed and wake taps** define each night. A double tap can't open two nights, and a night left open 16 h prompts for the real wake time | [nights.md](nights.md) |
 | **Overnight sound monitoring**: relative sound levels once a second, noise events, activity per minute. Levels only, never audio | [sound-monitoring.md](sound-monitoring.md) |
-| **Smart alarm** in a wake window (default 05:45–06:15). It rings early when you stir, otherwise at the end of the window. The sound rises from 10 % to 100 % over 60 s, with no vibration, over the lock screen. On/off switch on Home | [alarm.md](alarm.md) |
+| **Smart alarm** in a wake window (default 05:45–06:15). It rings early when you stir, otherwise at the end of the window. The sound eases in from 2 % to 100 % over 3 minutes, with no vibration, over the lock screen. On/off switch on Home | [alarm.md](alarm.md) |
 | **Shrinking snoozes**: 9 → 7 → 5 → 3 → 2 minutes, at most 5, then only I'm up. Every snooze is counted | [alarm.md](alarm.md#snooze-and-dismiss) |
 | **Bedtime reminder** 30 minutes before the bedtime goal (default 21:30 for 22:00). Skipped once you're in bed | [alarm.md](alarm.md#bedtime-reminder) |
 | **Sleep score maths** (0–100 with breakdown), night metrics and regularity, unit tested. Not shown in the app until there's sleep data (step 5) and a report (step 6) | [metrics.md](metrics.md) |

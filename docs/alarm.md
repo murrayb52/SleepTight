@@ -48,7 +48,7 @@ Activity per minute is kept in memory by the recorder and rebuilt from stored sa
 `AlarmRingService` (a foreground service of type `mediaPlayback`) is started by the ring alarm. It:
 
 - records `alarmFiredAt` on the night (first ring only, so snoozes don't overwrite it) and calls `AlarmEvents.onAlarmFired`
-- plays the chosen sound (see [Sounds](#sounds)) on the **alarm stream**, with the volume ramping from **10 % to 100 % over 60 s**. There's **no vibration**: you asked for sound only (2026-11-04)
+- plays the chosen sound (see [Sounds](#sounds)) on the **alarm stream**, with the volume easing in from **2 % to 100 % over 3 minutes**, exponentially so it rises evenly to the ear (about 10 % at 90 s; changed 2026-11-09 because 10 % linear over 60 s started too loud). There's **no vibration**: you asked for sound only (2026-11-04)
 - shows a full-screen alarm over the lock screen, with the time, a press-and-hold **I'm up** and, while snoozes are left, a swipe up to snooze
 
 If the phone is unlocked and in use, Android shows a heads-up notification with **Snooze** and **I'm up** instead of taking over the screen. Home also shows a "Good morning" card with **Snooze** while the alarm is ringing or snoozed; the press-and-hold I'm up below it ends the alarm and the night.
@@ -92,6 +92,6 @@ Four sounds (`AlarmSound`), chosen in **Profile → Alarm → Sound**: **Birdson
 
 - **Chime and Music box were removed on 2026-11-05.** Their bright, ringing pitch startled the user awake.
 - The choice is stored as a key in `Settings.alarmSound`. No key, or the key of a removed sound (`music_box`), means Birdsong.
-- Sounds loop with `MediaPlayer` on the alarm stream, with the 10 → 100 % ramp (`AlarmPlayer`). If a file can't be played, the generated chime (`Chime`, a C–E–G bell, looped with a static `AudioTrack`) rings instead: it's no longer a choice, but an alarm that rings beats one that doesn't.
+- Sounds loop with `MediaPlayer` on the alarm stream, with the 2 → 100 % ease-in (`AlarmPlayer`). If a file can't be played, the generated chime (`Chime`, a C–E–G bell, looped with a static `AudioTrack`) rings instead: it's no longer a choice, but an alarm that rings beats one that doesn't.
 - In the picker, each sound shows who made it ("by F1tz · CC0 · Freesound"), from the same `SoundCredit` as the credits page. Tapping a sound selects it and plays a preview at half volume on the alarm stream, so it follows the alarm volume. The preview stops on the next tap or when the picker closes.
 - Emulator-checked: with Birdsong selected, the ring plays a looping `MediaPlayer` with `USAGE_ALARM`.
