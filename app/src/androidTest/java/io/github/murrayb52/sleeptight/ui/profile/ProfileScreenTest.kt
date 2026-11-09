@@ -54,14 +54,34 @@ class ProfileScreenTest {
     @Test
     fun profileSummarisesEachSettingsPageAndOpensIt() {
         showProfile(Settings(targetSleepMinutes = 480, maxSnoozes = 1, snoozesAllowed = 5))
-        compose.onNodeWithText("30 min window", substring = true).assertExists()
-        compose.onNodeWithText("5 snoozes", substring = true).assertExists()
+        compose.onNodeWithText("30 min · Birdsong", substring = true).assertExists()
+        compose.onNodeWithText("5 snoozes from 10 min", substring = true).assertExists()
         compose.onNodeWithText("Bedtime reminder on").assertExists()
         compose.onNodeWithText("8 h", substring = true).assertExists()
         compose.onNodeWithTag("settingsAlarm").performClick()
         assertEquals(SettingsPageId.ALARM, opened)
         compose.onNodeWithTag("settingsGoals").performScrollTo().performClick()
         assertEquals(SettingsPageId.GOALS, opened)
+    }
+
+    @Test
+    fun theAlarmSummaryFollowsTheFirstSnoozeSetting() {
+        showProfile(Settings(snoozesAllowed = 3, firstSnoozeMinutes = 4))
+        compose.onNodeWithText("3 snoozes from 4 min", substring = true).assertExists()
+    }
+
+    @Test
+    fun theAlarmSummaryFitsOnOneLine() {
+        // The longest it gets: a two-digit window, the longest sound name and a two-digit snooze.
+        showProfile(Settings(snoozesAllowed = 10, firstSnoozeMinutes = 10, alarmSound = "epiano"))
+        assertEquals(1, lineCountOf("30 min · Morning piano · 10 snoozes from 10 min"))
+    }
+
+    @Test
+    fun withNoSnoozesTheSummaryDoesNotMentionALength() {
+        showProfile(Settings(snoozesAllowed = 0))
+        // No snoozes means no first snooze to report: the only "min" left is the wake window.
+        compose.onNodeWithText("30 min · Birdsong · no snoozes", substring = true).assertExists()
     }
 
     @Test
